@@ -1,0 +1,10 @@
+package com.zinemasterapp.ekosrekja.fun.repos;
+
+import com.zinemasterapp.ekosrekja.fun.entity.Video;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface VideoRepository extends JpaRepository<Video, Long> {
+    Page<Video> findByTitleContainingIgnoreCase(String q, Pageable p);
+}
