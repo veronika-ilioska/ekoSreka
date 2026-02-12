@@ -1,10 +1,9 @@
 package com.zinemasterapp.ekosrekja.fun.entity;
 
 import jakarta.persistence.*;
+import java.time.OffsetDateTime;
 import lombok.Getter;
 import lombok.Setter;
-
-import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "photos")
@@ -16,11 +15,14 @@ public class Photo {
     private Long id;
 
     private String title;
-    @Column(length = 2000) private String description;
+
+    @Column(length = 2000)
+    private String description;
+
     private String url;
     private String thumbnailUrl;
 
-    private String tags; //dali mi treba??
+    private String tags; // dali mi treba??
 
     private OffsetDateTime createdAt = OffsetDateTime.now();
 }

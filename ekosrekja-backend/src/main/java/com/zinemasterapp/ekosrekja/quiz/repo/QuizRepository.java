@@ -7,5 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface QuizRepository extends JpaRepository<Quiz, Long> {
     Page<Quiz> findByActiveTrue(Pageable p);
+
     Page<Quiz> findByActiveTrueAndLevelIgnoreCase(String level, Pageable p);
 }

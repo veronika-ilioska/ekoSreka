@@ -7,5 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface GameRepository extends JpaRepository<Game, Long> {
     Page<Game> findByTitleContainingIgnoreCase(String q, Pageable p);
+
     Page<Game> findByDifficulty(Difficulty d, Pageable p);
 }

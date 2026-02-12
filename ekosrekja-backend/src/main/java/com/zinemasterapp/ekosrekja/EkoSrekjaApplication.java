@@ -9,5 +9,4 @@ public class EkoSrekjaApplication {
     public static void main(String[] args) {
         SpringApplication.run(EkoSrekjaApplication.class, args);
     }
-
 }

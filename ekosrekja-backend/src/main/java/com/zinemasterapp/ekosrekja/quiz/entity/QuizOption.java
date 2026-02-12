@@ -8,13 +8,17 @@ import lombok.Setter;
 @Getter
 @Setter
 public class QuizOption {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "question_id")
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "question_id")
     private QuizQuestion question;
+
     @Column(columnDefinition = "TEXT")
     private String text;
+
     private boolean isCorrect;
     private Integer ord = 0;
-
 }

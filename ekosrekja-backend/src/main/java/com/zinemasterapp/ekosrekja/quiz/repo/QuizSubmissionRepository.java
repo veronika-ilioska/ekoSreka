@@ -4,4 +4,3 @@ import com.zinemasterapp.ekosrekja.quiz.entity.QuizSubmission;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface QuizSubmissionRepository extends JpaRepository<QuizSubmission, Long> {}
-

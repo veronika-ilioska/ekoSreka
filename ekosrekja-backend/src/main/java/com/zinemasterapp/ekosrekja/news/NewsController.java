@@ -1,12 +1,11 @@
 package com.zinemasterapp.ekosrekja.news;
 
 import jakarta.validation.Valid;
+import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.*;
-
-import java.time.Instant;
 
 @RestController
 @RequestMapping("/api/news")
@@ -17,8 +16,7 @@ public class NewsController {
     @GetMapping
     public Page<News> list(
             @RequestParam(required = false) String category,
-            @PageableDefault(size = 12) Pageable p
-    ){
+            @PageableDefault(size = 12) Pageable p) {
         if (category == null || category.isBlank()) {
             return repo.findByPublishedTrue(p);
         }

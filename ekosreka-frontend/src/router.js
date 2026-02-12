@@ -4,20 +4,19 @@ export default createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/', component: () => import('./pages/Home.vue') },
-{ path: '/news', component: () => import('./pages/News.vue') },
-    { path: '/quizzes', component: () => import('./pages/Quizzes.vue') },   
+    { path: '/news', component: () => import('./pages/News.vue') },
+    { path: '/quizzes', component: () => import('./pages/Quizzes.vue') },
     { path: '/fun', component: () => import('./pages/Fun.vue') },
     { path: '/about', component: () => import('./pages/About.vue') },
-{ path: '/shop', component: () => import('./pages/Shop.vue') },
-{ path: '/quizzes/:id', component: () => import('./pages/QuizRun.vue') },
-{
-  path: '/photos',
-  name: 'photos',
-  component: () => import('./pages/PhotosPage.vue') // прилагоди патека
-},{ path: '/videos', component: () => import('./pages/VideosPage.vue') },
-{ path: '/games', component: () => import('./pages/GamesPage.vue') },
-{ path: '/horoscope', component: () => import('./pages/HoroscopePage.vue') },
-
-
+    { path: '/shop', component: () => import('./pages/Shop.vue') },
+    { path: '/quizzes/:id', component: () => import('./pages/QuizRun.vue') },
+    {
+      path: '/photos',
+      name: 'photos',
+      component: () => import('./pages/PhotosPage.vue'), // прилагоди патека
+    },
+    { path: '/videos', component: () => import('./pages/VideosPage.vue') },
+    { path: '/games', component: () => import('./pages/GamesPage.vue') },
+    { path: '/horoscope', component: () => import('./pages/HoroscopePage.vue') },
   ],
 });
