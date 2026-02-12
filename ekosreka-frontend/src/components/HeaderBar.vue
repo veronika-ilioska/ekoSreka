@@ -46,16 +46,105 @@
           </li>
         </ul>
 
-        <div class="ms-lg-3 mt-2 mt-lg-0">
-          <RouterLink to="/quizzes" class="btn btn-sm eco-btn text-white px-3"
-            >Започни квиз</RouterLink
-          >
+        <!-- Auth Section -->
+        <div class="ms-lg-3 mt-2 mt-lg-0 d-flex gap-2 align-items-center flex-wrap">
+          <template v-if="authStore.isAuthenticated">
+            <!-- User Dropdown -->
+            <div class="dropdown">
+              <button
+                class="btn btn-sm eco-btn dropdown-toggle text-white px-3"
+                type="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                <i class="bi bi-person-circle me-1"></i>
+                {{ authStore.userName }}
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li>
+                  <RouterLink class="dropdown-item" to="/profile">
+                    <i class="bi bi-person me-2"></i>Мој профил
+                  </RouterLink>
+                </li>
+                <li>
+                  <RouterLink class="dropdown-item" to="/settings">
+                    <i class="bi bi-gear me-2"></i>Поставки
+                  </RouterLink>
+                </li>
+                <li><hr class="dropdown-divider" /></li>
+                <li>
+                  <button class="dropdown-item text-danger" @click="handleLogout">
+                    <i class="bi bi-box-arrow-right me-2"></i>Одјави се
+                  </button>
+                </li>
+              </ul>
+            </div>
+          </template>
+
+          <template v-else>
+            <!-- Login/Signup Buttons -->
+            <RouterLink
+              to="/login"
+              class="btn btn-sm btn-outline-light text-white px-3"
+              style="border-color: currentColor"
+            >
+              Пријави се
+            </RouterLink>
+            <RouterLink to="/signup" class="btn btn-sm eco-btn text-white px-3">
+              Регистрирај се
+            </RouterLink>
+          </template>
         </div>
       </div>
     </div>
   </nav>
 </template>
 <script setup>
-  import { useRoute } from 'vue-router';
+  import { useRoute, useRouter } from 'vue-router';
+  import { useAuthStore } from '../stores/authStore';
+
   const route = useRoute();
+  const router = useRouter();
+  const authStore = useAuthStore();
+
+  const handleLogout = () => {
+    authStore.logout();
+    router.push('/');
+  };
 </script>
+
+<style scoped>
+  .dropdown-menu {
+    border: 1px solid rgba(76, 175, 80, 0.2);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .dropdown-item {
+    transition: all 0.2s ease;
+  }
+
+  .dropdown-item:hover {
+    background: rgba(76, 175, 80, 0.1);
+    color: var(--eco-accent) !important;
+  }
+
+  .btn-outline-light {
+    border-radius: 8px;
+    font-weight: 600;
+  }
+
+  .btn-outline-light:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  @media (max-width: 991px) {
+    .navbar-collapse {
+      margin-top: 1rem;
+    }
+
+    .d-flex {
+      margin-top: 1rem;
+    }
+  }
+</style>

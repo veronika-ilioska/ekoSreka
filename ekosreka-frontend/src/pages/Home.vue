@@ -48,33 +48,42 @@
     </div>
   </section>
 
-  <section class="eco-cta-band text-white">
+  <section class="eco-cta-band eco-cta-band--cute text-white">
     <div class="container-fluid px-0">
       <div class="row g-0 text-center">
         <div class="col-12 col-md-4">
-          <RouterLink to="/quizzes" class="cta-tile">
+          <RouterLink to="/quizzes" class="cta-tile cta-tile--quiz">
             <div class="cta-inner">
-              <i class="bi bi-question-circle display-5 mb-2"></i>
-              <h3>Квизови</h3>
-              <p>Испробај го твоето еко знаење</p>
+              <div class="cta-icon">
+                <i class="bi bi-lightbulb"></i>
+              </div>
+              <h3 class="cta-title">Квизови</h3>
+              <p class="cta-subtitle">Испробај го твоето еко знаење</p>
+              <span class="cta-arrow">→</span>
             </div>
           </RouterLink>
         </div>
         <div class="col-12 col-md-4">
-          <RouterLink to="/shop" class="cta-tile">
+          <RouterLink to="/shop" class="cta-tile cta-tile--shop">
             <div class="cta-inner">
-              <i class="bi bi-bag-heart display-5 mb-2"></i>
-              <h3>Онлајн продавница</h3>
-              <p>Еко производи за секој ден</p>
+              <div class="cta-icon">
+                <i class="bi bi-leaf"></i>
+              </div>
+              <h3 class="cta-title">Онлајн продавница</h3>
+              <p class="cta-subtitle">Еко производи за секој ден</p>
+              <span class="cta-arrow">🛍️</span>
             </div>
           </RouterLink>
         </div>
         <div class="col-12 col-md-4">
-          <RouterLink to="/fun" class="cta-tile">
+          <RouterLink to="/fun" class="cta-tile cta-tile--fun">
             <div class="cta-inner">
-              <i class="bi bi-emoji-smile display-5 mb-2"></i>
-              <h3>Забава</h3>
-              <p>Позитивна еко содржина</p>
+              <div class="cta-icon">
+                <i class="bi bi-flower1"></i>
+              </div>
+              <h3 class="cta-title">Забава</h3>
+              <p class="cta-subtitle">Позитивна еко содржина</p>
+              <span class="cta-arrow">✨</span>
             </div>
           </RouterLink>
         </div>

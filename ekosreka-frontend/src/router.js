@@ -4,6 +4,8 @@ export default createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/', component: () => import('./pages/Home.vue') },
+    { path: '/login', component: () => import('./pages/Login.vue') },
+    { path: '/signup', component: () => import('./pages/Signup.vue') },
     { path: '/news', component: () => import('./pages/News.vue') },
     { path: '/quizzes', component: () => import('./pages/Quizzes.vue') },
     { path: '/fun', component: () => import('./pages/Fun.vue') },
