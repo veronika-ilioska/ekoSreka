@@ -55,11 +55,10 @@
           <RouterLink to="/quizzes" class="cta-tile cta-tile--quiz">
             <div class="cta-inner">
               <div class="cta-icon">
-                <i class="bi bi-lightbulb"></i>
+                <img src="../img/quiz.png" alt="Quiz" class="cta-icon-img" />
               </div>
               <h3 class="cta-title">Квизови</h3>
               <p class="cta-subtitle">Испробај го твоето еко знаење</p>
-              <span class="cta-arrow">→</span>
             </div>
           </RouterLink>
         </div>
@@ -67,11 +66,10 @@
           <RouterLink to="/shop" class="cta-tile cta-tile--shop">
             <div class="cta-inner">
               <div class="cta-icon">
-                <i class="bi bi-leaf"></i>
+                <img src="../img/bag.png" alt="Shop" class="cta-icon-img" />
               </div>
               <h3 class="cta-title">Онлајн продавница</h3>
               <p class="cta-subtitle">Еко производи за секој ден</p>
-              <span class="cta-arrow">🛍️</span>
             </div>
           </RouterLink>
         </div>
@@ -79,11 +77,10 @@
           <RouterLink to="/fun" class="cta-tile cta-tile--fun">
             <div class="cta-inner">
               <div class="cta-icon">
-                <i class="bi bi-flower1"></i>
+                <img src="../img/game.png" alt="Fun" class="cta-icon-img" />
               </div>
               <h3 class="cta-title">Забава</h3>
               <p class="cta-subtitle">Позитивна еко содржина</p>
-              <span class="cta-arrow">✨</span>
             </div>
           </RouterLink>
         </div>
@@ -116,3 +113,12 @@
     latest.value = data.content || [];
   });
 </script>
+
+<style scoped>
+  .cta-icon-img {
+    width: 60px;
+    height: 60px;
+    object-fit: contain;
+  }
+</style>
+
