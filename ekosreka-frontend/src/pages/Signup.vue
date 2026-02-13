@@ -10,20 +10,54 @@
             </div>
 
             <form @submit.prevent="handleSignup">
-              <!-- Name -->
+              <!-- Username -->
               <div class="mb-3">
-                <label for="name" class="form-label">Полно име</label>
+                <label for="username" class="form-label">Корисничко име</label>
                 <input
-                  id="name"
-                  v-model="form.name"
+                  id="username"
+                  v-model="form.username"
                   type="text"
                   class="form-control"
-                  :class="{ 'is-invalid': errors.name }"
+                  :class="{ 'is-invalid': errors.username }"
+                  placeholder="твое_корисничко_име"
+                  required
+                />
+                <div v-if="errors.username" class="invalid-feedback d-block">
+                  {{ errors.username }}
+                </div>
+                <small class="text-muted d-block mt-1">Минимум 3 карактери</small>
+              </div>
+
+              <!-- First Name -->
+              <div class="mb-3">
+                <label for="firstName" class="form-label">Име</label>
+                <input
+                  id="firstName"
+                  v-model="form.firstName"
+                  type="text"
+                  class="form-control"
+                  :class="{ 'is-invalid': errors.firstName }"
                   placeholder="Твое име"
                   required
                 />
-                <div v-if="errors.name" class="invalid-feedback d-block">
-                  {{ errors.name }}
+                <div v-if="errors.firstName" class="invalid-feedback d-block">
+                  {{ errors.firstName }}
+                </div>
+              </div>
+
+              <!-- Last Name -->
+              <div class="mb-3">
+                <label for="lastName" class="form-label">Презиме</label>
+                <input
+                  id="lastName"
+                  v-model="form.lastName"
+                  type="text"
+                  class="form-control"
+                  :class="{ 'is-invalid': errors.lastName }"
+                  placeholder="Твое презиме"
+                />
+                <div v-if="errors.lastName" class="invalid-feedback d-block">
+                  {{ errors.lastName }}
                 </div>
               </div>
 
@@ -150,7 +184,9 @@
   const authStore = useAuthStore();
 
   const form = reactive({
-    name: '',
+    username: '',
+    firstName: '',
+    lastName: '',
     email: '',
     password: '',
     passwordConfirm: '',
@@ -162,10 +198,14 @@
   const handleSignup = async () => {
     errors.value = {};
 
-    if (!form.name) {
-      errors.value.name = 'Полното име е задолжително';
-    } else if (form.name.length < 2) {
-      errors.value.name = 'Името мора да има барем 2 карактери';
+    if (!form.username) {
+      errors.value.username = 'Корисничкото име е задолжително';
+    } else if (form.username.length < 3) {
+      errors.value.username = 'Корисничкото име мора да има барем 3 карактери';
+    }
+
+    if (!form.firstName) {
+      errors.value.firstName = 'Името е задолжително';
     }
 
     if (!form.email) {
@@ -195,7 +235,14 @@
     }
 
     try {
-      await authStore.signup(form.name, form.email, form.password, form.passwordConfirm);
+      await authStore.signup(
+        form.username,
+        form.email,
+        form.password,
+        form.passwordConfirm,
+        form.firstName,
+        form.lastName
+      );
       router.push('/');
     } catch (err) {
       // Error is handled by authStore

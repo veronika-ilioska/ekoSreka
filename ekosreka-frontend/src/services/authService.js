@@ -1,39 +1,38 @@
 import { api } from '../api';
 
 export const authService = {
-  async login(email, password) {
-    const response = await api.post('/auth/login', { email, password });
-    if (response.data.token) {
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
-      api.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
+  async login(username, password) {
+    const response = await api.post('/auth/login', { username, password });
+    if (response.data.id) {
+      localStorage.setItem('userId', response.data.id);
+      localStorage.setItem('user', JSON.stringify(response.data));
     }
     return response.data;
   },
 
-  async signup(name, email, password, passwordConfirm) {
+  async signup(username, email, password, confirmPassword, firstName, lastName) {
     const response = await api.post('/auth/signup', {
-      name,
+      username,
       email,
       password,
-      passwordConfirm,
+      confirmPassword,
+      firstName,
+      lastName,
     });
-    if (response.data.token) {
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
-      api.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
+    if (response.data.id) {
+      localStorage.setItem('userId', response.data.id);
+      localStorage.setItem('user', JSON.stringify(response.data));
     }
     return response.data;
   },
 
   logout() {
-    localStorage.removeItem('token');
+    localStorage.removeItem('userId');
     localStorage.removeItem('user');
-    delete api.defaults.headers.common['Authorization'];
   },
 
-  getToken() {
-    return localStorage.getItem('token');
+  getUserId() {
+    return localStorage.getItem('userId');
   },
 
   getUser() {
@@ -42,13 +41,13 @@ export const authService = {
   },
 
   isAuthenticated() {
-    return !!this.getToken();
+    return !!this.getUserId();
   },
 
   initializeAuth() {
-    const token = this.getToken();
-    if (token) {
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    const user = this.getUser();
+    if (user) {
+      // Auth is managed via userId in localStorage
     }
   },
 };

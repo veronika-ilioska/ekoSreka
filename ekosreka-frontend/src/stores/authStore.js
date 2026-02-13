@@ -4,20 +4,24 @@ import { authService } from '../services/authService';
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref(authService.getUser());
-  const token = ref(authService.getToken());
+  const userId = ref(authService.getUserId());
   const loading = ref(false);
   const error = ref(null);
 
-  const isAuthenticated = computed(() => !!token.value);
-  const userName = computed(() => user.value?.name || 'User');
+  const isAuthenticated = computed(() => !!userId.value);
+  const userName = computed(() => {
+    if (user.value?.username) return user.value.username;
+    if (user.value?.firstName) return user.value.firstName;
+    return 'User';
+  });
 
-  async function login(email, password) {
+  async function login(username, password) {
     loading.value = true;
     error.value = null;
     try {
-      const data = await authService.login(email, password);
-      user.value = data.user;
-      token.value = data.token;
+      const data = await authService.login(username, password);
+      user.value = data;
+      userId.value = data.id;
       return data;
     } catch (err) {
       error.value = err.response?.data?.message || 'Login failed';
@@ -27,13 +31,20 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function signup(name, email, password, passwordConfirm) {
+  async function signup(username, email, password, confirmPassword, firstName, lastName) {
     loading.value = true;
     error.value = null;
     try {
-      const data = await authService.signup(name, email, password, passwordConfirm);
-      user.value = data.user;
-      token.value = data.token;
+      const data = await authService.signup(
+        username,
+        email,
+        password,
+        confirmPassword,
+        firstName,
+        lastName
+      );
+      user.value = data;
+      userId.value = data.id;
       return data;
     } catch (err) {
       error.value = err.response?.data?.message || 'Signup failed';
@@ -46,7 +57,7 @@ export const useAuthStore = defineStore('auth', () => {
   function logout() {
     authService.logout();
     user.value = null;
-    token.value = null;
+    userId.value = null;
     error.value = null;
   }
 
@@ -56,7 +67,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   return {
     user,
-    token,
+    userId,
     loading,
     error,
     isAuthenticated,

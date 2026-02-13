@@ -10,20 +10,20 @@
             </div>
 
             <form @submit.prevent="handleLogin">
-              <!-- Email -->
+              <!-- Username -->
               <div class="mb-3">
-                <label for="email" class="form-label">Имејл адреса</label>
+                <label for="username" class="form-label">Корисничко име</label>
                 <input
-                  id="email"
-                  v-model="form.email"
-                  type="email"
+                  id="username"
+                  v-model="form.username"
+                  type="text"
                   class="form-control"
-                  :class="{ 'is-invalid': errors.email }"
-                  placeholder="твој@имејл.com"
+                  :class="{ 'is-invalid': errors.username }"
+                  placeholder="твое_корисничко_име"
                   required
                 />
-                <div v-if="errors.email" class="invalid-feedback d-block">
-                  {{ errors.email }}
+                <div v-if="errors.username" class="invalid-feedback d-block">
+                  {{ errors.username }}
                 </div>
               </div>
 
@@ -96,7 +96,7 @@
   const authStore = useAuthStore();
 
   const form = reactive({
-    email: '',
+    username: '',
     password: '',
   });
 
@@ -105,10 +105,8 @@
   const handleLogin = async () => {
     errors.value = {};
 
-    if (!form.email) {
-      errors.value.email = 'Имејл адреса е задолжителна';
-    } else if (!form.email.includes('@')) {
-      errors.value.email = 'Внеси валидна имејл адреса';
+    if (!form.username) {
+      errors.value.username = 'Корисничкото име е задолжително';
     }
 
     if (!form.password) {
@@ -122,7 +120,7 @@
     }
 
     try {
-      await authStore.login(form.email, form.password);
+      await authStore.login(form.username, form.password);
       router.push('/');
     } catch (err) {
       // Error is handled by authStore
