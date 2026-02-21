@@ -1,4 +1,4 @@
-package com.zinemasterapp.ekosrekja.user.entity;
+package com.ekosrekja.ekosrekjafullstack.user.entity;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
@@ -14,6 +14,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 @Entity
 @Table(name = "users")
 @Getter
+
 @Setter
 public class User implements UserDetails {
 

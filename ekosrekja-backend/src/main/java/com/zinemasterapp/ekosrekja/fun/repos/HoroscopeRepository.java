@@ -1,8 +1,8 @@
-package com.zinemasterapp.ekosrekja.fun.repos;
+package com.ekosrekja.ekosrekjafullstack.fun.repos;
 
-import com.zinemasterapp.ekosrekja.fun.PeriodType;
-import com.zinemasterapp.ekosrekja.fun.ZodiacSign;
-import com.zinemasterapp.ekosrekja.fun.entity.HoroscopeEntry;
+import com.ekosrekja.ekosrekjafullstack.fun.PeriodType;
+import com.ekosrekja.ekosrekjafullstack.fun.ZodiacSign;
+import com.ekosrekja.ekosrekjafullstack.fun.entity.HoroscopeEntry;
 import java.time.LocalDate;
 import java.util.*;
 import org.springframework.data.jpa.repository.JpaRepository;

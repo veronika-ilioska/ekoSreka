@@ -1,4 +1,4 @@
-package com.zinemasterapp.ekosrekja.config;
+package com.ekosrekja.ekosrekjafullstack.config;
 
 import java.util.List;
 import org.springframework.context.annotation.Bean;

@@ -1,4 +1,4 @@
-package com.zinemasterapp.ekosrekja.fun;
+package com.ekosrekja.ekosrekjafullstack.fun;
 
 import java.time.LocalDate;
 

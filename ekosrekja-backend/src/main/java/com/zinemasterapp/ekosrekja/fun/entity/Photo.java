@@ -1,4 +1,4 @@
-package com.zinemasterapp.ekosrekja.fun.entity;
+package com.ekosrekja.ekosrekjafullstack.fun.entity;
 
 import jakarta.persistence.*;
 import java.time.OffsetDateTime;

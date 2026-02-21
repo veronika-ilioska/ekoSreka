@@ -1,4 +1,4 @@
-package com.zinemasterapp.ekosrekja.news;
+package com.ekosrekja.ekosrekjafullstack.news;
 
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.repository.JpaRepository;

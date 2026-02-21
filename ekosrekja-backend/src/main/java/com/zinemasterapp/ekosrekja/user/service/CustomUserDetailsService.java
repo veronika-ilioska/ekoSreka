@@ -1,6 +1,6 @@
-package com.zinemasterapp.ekosrekja.user.service;
+package com.ekosrekja.ekosrekjafullstack.user.service;
 
-import com.zinemasterapp.ekosrekja.user.repository.UserRepository;
+import com.ekosrekja.ekosrekjafullstack.user.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;

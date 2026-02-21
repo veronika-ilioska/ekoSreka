@@ -1,10 +1,10 @@
-package com.zinemasterapp.ekosrekja.user.service;
+package com.ekosrekja.ekosrekjafullstack.user.service;
 
 import com.zinemasterapp.ekosrekja.user.dto.LoginRequest;
 import com.zinemasterapp.ekosrekja.user.dto.SignupRequest;
 import com.zinemasterapp.ekosrekja.user.dto.UserResponse;
 import com.zinemasterapp.ekosrekja.user.entity.User;
-import com.zinemasterapp.ekosrekja.user.repository.UserRepository;
+import com.ekosrekja.ekosrekjafullstack.user.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;

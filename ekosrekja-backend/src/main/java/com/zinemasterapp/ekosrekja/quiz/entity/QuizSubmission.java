@@ -1,4 +1,4 @@
-package com.zinemasterapp.ekosrekja.quiz.entity;
+package com.ekosrekja.ekosrekjafullstack.quiz.entity;
 
 import jakarta.persistence.*;
 import java.time.Instant;

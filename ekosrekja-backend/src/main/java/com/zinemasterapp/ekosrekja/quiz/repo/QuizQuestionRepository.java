@@ -1,6 +1,6 @@
-package com.zinemasterapp.ekosrekja.quiz.repo;
+package com.ekosrekja.ekosrekjafullstack.quiz.repo;
 
-import com.zinemasterapp.ekosrekja.quiz.entity.QuizQuestion;
+import com.ekosrekja.ekosrekjafullstack.quiz.entity.QuizQuestion;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 

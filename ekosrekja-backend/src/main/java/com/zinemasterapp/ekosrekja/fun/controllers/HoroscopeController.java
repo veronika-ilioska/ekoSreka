@@ -1,7 +1,7 @@
-package com.zinemasterapp.ekosrekja.fun.controllers;
+package com.ekosrekja.ekosrekjafullstack.fun.controllers;
 
-import com.zinemasterapp.ekosrekja.fun.PeriodType;
-import com.zinemasterapp.ekosrekja.fun.ZodiacSign;
+import com.ekosrekja.ekosrekjafullstack.fun.PeriodType;
+import com.ekosrekja.ekosrekjafullstack.fun.ZodiacSign;
 import com.zinemasterapp.ekosrekja.fun.dto;
 import com.zinemasterapp.ekosrekja.fun.repos.HoroscopeRepository;
 import java.time.LocalDate;

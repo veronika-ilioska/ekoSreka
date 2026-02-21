@@ -1,4 +1,4 @@
-package com.zinemasterapp.ekosrekja.fun.controllers;
+package com.ekosrekja.ekosrekjafullstack.fun.controllers;
 
 import com.zinemasterapp.ekosrekja.fun.dto;
 import com.zinemasterapp.ekosrekja.fun.repos.GameRepository;

@@ -1,6 +1,6 @@
-package com.zinemasterapp.ekosrekja.fun.controllers;
+package com.ekosrekja.ekosrekjafullstack.fun.controllers;
 
-import com.zinemasterapp.ekosrekja.fun.Difficulty;
+import com.ekosrekja.ekosrekjafullstack.fun.Difficulty;
 import com.zinemasterapp.ekosrekja.fun.entity.Photo;
 import com.zinemasterapp.ekosrekja.fun.entity.Video;
 import com.zinemasterapp.ekosrekja.fun.repos.GameRepository;

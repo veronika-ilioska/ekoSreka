@@ -1,4 +1,4 @@
-package com.zinemasterapp.ekosrekja.quiz;
+package com.ekosrekja.ekosrekjafullstack.quiz;
 
 import com.zinemasterapp.ekosrekja.quiz.entity.Quiz;
 import com.zinemasterapp.ekosrekja.quiz.entity.QuizOption;

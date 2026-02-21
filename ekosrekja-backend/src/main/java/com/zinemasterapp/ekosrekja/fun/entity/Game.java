@@ -1,6 +1,6 @@
-package com.zinemasterapp.ekosrekja.fun.entity;
+package com.ekosrekja.ekosrekjafullstack.fun.entity;
 
-import com.zinemasterapp.ekosrekja.fun.Difficulty;
+import com.ekosrekja.ekosrekjafullstack.fun.Difficulty;
 import jakarta.persistence.*;
 
 @Entity

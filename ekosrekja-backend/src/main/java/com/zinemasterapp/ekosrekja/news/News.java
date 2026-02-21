@@ -1,4 +1,4 @@
-package com.zinemasterapp.ekosrekja.news;
+package com.ekosrekja.ekosrekjafullstack.news;
 
 import jakarta.persistence.*;
 import java.time.Instant;

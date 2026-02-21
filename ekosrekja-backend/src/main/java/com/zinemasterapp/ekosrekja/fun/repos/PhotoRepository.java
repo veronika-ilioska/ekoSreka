@@ -1,6 +1,6 @@
-package com.zinemasterapp.ekosrekja.fun.repos;
+package com.ekosrekja.ekosrekjafullstack.fun.repos;
 
-import com.zinemasterapp.ekosrekja.fun.entity.Photo;
+import com.ekosrekja.ekosrekjafullstack.fun.entity.Photo;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

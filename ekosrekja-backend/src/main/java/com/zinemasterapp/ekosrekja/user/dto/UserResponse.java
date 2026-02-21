@@ -1,4 +1,4 @@
-package com.zinemasterapp.ekosrekja.user.dto;
+package com.ekosrekja.ekosrekjafullstack.user.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

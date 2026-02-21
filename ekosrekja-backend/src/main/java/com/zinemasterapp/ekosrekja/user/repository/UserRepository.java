@@ -1,4 +1,4 @@
-package com.zinemasterapp.ekosrekja.user.repository;
+package com.ekosrekja.ekosrekjafullstack.user.repository;
 
 import com.zinemasterapp.ekosrekja.user.entity.User;
 import java.util.Optional;

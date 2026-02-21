@@ -1,7 +1,7 @@
-package com.zinemasterapp.ekosrekja.fun.entity;
+package com.ekosrekja.ekosrekjafullstack.fun.entity;
 
-import com.zinemasterapp.ekosrekja.fun.PeriodType;
-import com.zinemasterapp.ekosrekja.fun.ZodiacSign;
+import com.ekosrekja.ekosrekjafullstack.fun.PeriodType;
+import com.ekosrekja.ekosrekjafullstack.fun.ZodiacSign;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import lombok.Getter;

@@ -1,7 +1,7 @@
-package com.zinemasterapp.ekosrekja.fun.repos;
+package com.ekosrekja.ekosrekjafullstack.fun.repos;
 
-import com.zinemasterapp.ekosrekja.fun.Difficulty;
-import com.zinemasterapp.ekosrekja.fun.entity.Game;
+import com.ekosrekja.ekosrekjafullstack.fun.Difficulty;
+import com.ekosrekja.ekosrekjafullstack.fun.entity.Game;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.repository.JpaRepository;
 

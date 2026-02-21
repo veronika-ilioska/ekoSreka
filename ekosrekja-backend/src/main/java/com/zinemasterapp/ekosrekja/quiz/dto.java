@@ -1,4 +1,4 @@
-package com.zinemasterapp.ekosrekja.quiz;
+package com.ekosrekja.ekosrekjafullstack.quiz;
 
 import java.util.List;
 
