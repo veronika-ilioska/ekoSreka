@@ -8,6 +8,7 @@ export default createRouter({
     { path: '/signup', component: () => import('./pages/Signup.vue') },
     { path: '/profile', component: () => import('./pages/Profile.vue') },
     { path: '/news', component: () => import('./pages/News.vue') },
+    { path: '/news/:id', component: () => import('./pages/NewsDetails.vue') },
     { path: '/quizzes', component: () => import('./pages/Quizzes.vue') },
     { path: '/fun', component: () => import('./pages/Fun.vue') },
     { path: '/about', component: () => import('./pages/About.vue') },

@@ -24,14 +24,14 @@
               @click="toggleEditMode"
               v-if="!isEditing"
             >
-              <i class="bi bi-pencil-square"></i> Edit Profile
+              <i class="bi bi-pencil-square"></i> Уреди Профил
             </button>
             <button
               class="btn btn-secondary"
               @click="toggleEditMode"
               v-if="isEditing"
             >
-              Cancel
+              Откажи
             </button>
           </div>
         </div>
@@ -45,28 +45,28 @@
           <!-- Main Profile Card -->
           <div class="col-12 col-lg-8">
             <div class="eco-card profile-card">
-              <h2 class="card-title mb-4">Profile Information</h2>
+              <h2 class="card-title mb-4">Информации за профилот</h2>
 
               <!-- View Mode -->
               <div v-if="!isEditing" class="profile-display">
                 <div class="info-row">
-                  <label class="info-label">First Name</label>
-                  <p class="info-value">{{ user?.firstName || 'Not provided' }}</p>
+                  <label class="info-label">Име</label>
+                  <p class="info-value">{{ user?.firstName || 'Не е наведено' }}</p>
                 </div>
                 <div class="info-row">
-                  <label class="info-label">Last Name</label>
-                  <p class="info-value">{{ user?.lastName || 'Not provided' }}</p>
+                  <label class="info-label">Презиме</label>
+                  <p class="info-value">{{ user?.lastName || 'Не е наведено' }}</p>
                 </div>
                 <div class="info-row">
-                  <label class="info-label">Username</label>
+                  <label class="info-label">Корисничко име</label>
                   <p class="info-value">{{ user?.username }}</p>
                 </div>
                 <div class="info-row">
-                  <label class="info-label">Email</label>
+                  <label class="info-label">Е-пошта</label>
                   <p class="info-value">{{ user?.email }}</p>
                 </div>
                 <div class="info-row">
-                  <label class="info-label">Member Since</label>
+                  <label class="info-label">Член од</label>
                   <p class="info-value">{{ formatDate(user?.createdAt) }}</p>
                 </div>
               </div>
@@ -74,49 +74,49 @@
               <!-- Edit Mode -->
               <form v-if="isEditing" @submit.prevent="saveProfile" class="profile-edit">
                 <div class="mb-3">
-                  <label for="firstName" class="form-label">First Name</label>
+                  <label for="firstName" class="form-label">Име</label>
                   <input
                     id="firstName"
                     v-model="editForm.firstName"
                     type="text"
                     class="form-control"
-                    placeholder="Enter first name"
+                    placeholder="Внесете име"
                   />
                 </div>
 
                 <div class="mb-3">
-                  <label for="lastName" class="form-label">Last Name</label>
+                  <label for="lastName" class="form-label">Презиме</label>
                   <input
                     id="lastName"
                     v-model="editForm.lastName"
                     type="text"
                     class="form-control"
-                    placeholder="Enter last name"
+                    placeholder="Внесете презиме"
                   />
                 </div>
 
                 <div class="mb-3">
-                  <label for="email" class="form-label">Email</label>
+                  <label for="email" class="form-label">Е-пошта</label>
                   <input
                     id="email"
                     v-model="editForm.email"
                     type="email"
                     class="form-control"
-                    placeholder="Enter email"
+                    placeholder="Внесете е-пошта"
                   />
                 </div>
 
                 <div class="mb-3">
-                  <label for="username" class="form-label">Username</label>
+                  <label for="username" class="form-label">Корисничко име</label>
                   <input
                     id="username"
                     v-model="editForm.username"
                     type="text"
                     class="form-control"
-                    placeholder="Enter username"
+                    placeholder="Внесете корисничко име"
                     disabled
                   />
-                  <small class="text-muted">Username cannot be changed</small>
+                  <small class="text-muted">Корисничкото име не може да се промени</small>
                 </div>
 
                 <!-- Error Messages -->
@@ -131,12 +131,86 @@
 
                 <!-- Success Messages -->
                 <div v-if="editSuccess" class="alert alert-success alert-dismissible fade show">
-                  Profile updated successfully!
+                  Профилот е успешно ажуриран!
                   <button
                     type="button"
                     class="btn-close"
                     @click="editSuccess = false"
                   ></button>
+                </div>
+
+                <!-- Password Change Toggle Button -->
+                <div class="password-toggle-section mb-3">
+                  <button
+                    type="button"
+                    class="btn btn-outline-secondary w-100"
+                    @click="togglePasswordSection"
+                  >
+                    <i :class="showPasswordSection ? 'bi bi-chevron-up' : 'bi bi-chevron-down'"></i>
+                    {{ showPasswordSection ? 'Скрии' : 'Промени' }} Лозинка
+                  </button>
+                </div>
+
+                <!-- Password Change Form (Hidden by default) -->
+                <div v-if="showPasswordSection" class="password-section-edit mb-4">
+                  <div class="mb-3">
+                    <label for="currentPasswordEdit" class="form-label">Тековна лозинка</label>
+                    <input
+                      id="currentPasswordEdit"
+                      v-model="passwordForm.current"
+                      type="password"
+                      class="form-control"
+                      placeholder="Внесете тековна лозинка"
+                    />
+                  </div>
+
+                  <div class="mb-3">
+                    <label for="newPasswordEdit" class="form-label">Нова лозинка</label>
+                    <input
+                      id="newPasswordEdit"
+                      v-model="passwordForm.new"
+                      type="password"
+                      class="form-control"
+                      placeholder="Внесете нова лозинка"
+                    />
+                  </div>
+
+                  <div class="mb-3">
+                    <label for="confirmPasswordEdit" class="form-label">Потврди лозинка</label>
+                    <input
+                      id="confirmPasswordEdit"
+                      v-model="passwordForm.confirm"
+                      type="password"
+                      class="form-control"
+                      placeholder="Потврди нова лозинка"
+                    />
+                  </div>
+
+                  <div v-if="passwordError" class="alert alert-danger alert-dismissible fade show">
+                    {{ passwordError }}
+                    <button
+                      type="button"
+                      class="btn-close"
+                      @click="passwordError = null"
+                    ></button>
+                  </div>
+
+                  <button
+                    type="button"
+                    class="btn eco-btn-primary w-100"
+                    @click="changePassword"
+                    :disabled="isChangingPassword"
+                  >
+                    <span v-if="!isChangingPassword">Ажурирај лозинка</span>
+                    <span v-else>
+                      <span
+                        class="spinner-border spinner-border-sm me-2"
+                        role="status"
+                        aria-hidden="true"
+                      ></span>
+                      Ажурирање...
+                    </span>
+                  </button>
                 </div>
 
                 <div class="form-actions">
@@ -145,14 +219,14 @@
                     class="btn eco-btn-primary"
                     :disabled="isSaving"
                   >
-                    <span v-if="!isSaving">Save Changes</span>
+                    <span v-if="!isSaving">Зачувај измени</span>
                     <span v-else>
                       <span
                         class="spinner-border spinner-border-sm me-2"
                         role="status"
                         aria-hidden="true"
                       ></span>
-                      Saving...
+                      Зачувување...
                     </span>
                   </button>
                   <button
@@ -160,7 +234,7 @@
                     class="btn btn-secondary"
                     @click="cancelEdit"
                   >
-                    Discard
+                    Отфрли
                   </button>
                 </div>
               </form>
@@ -171,115 +245,42 @@
           <div class="col-12 col-lg-4">
             <!-- Account Stats -->
             <div class="eco-card stats-card mb-4">
-              <h3 class="card-title mb-3">Account Stats</h3>
+              <h3 class="card-title mb-3">Статистика на сметка</h3>
               <div class="stat-item">
-                <span class="stat-label">Account Status</span>
-                <span class="stat-value badge bg-success">Active</span>
+                <span class="stat-label">Статус на сметка</span>
+                <span class="stat-value badge bg-success">Активна</span>
               </div>
               <div class="stat-item">
-                <span class="stat-label">Member Since</span>
+                <span class="stat-label">Член од</span>
                 <span class="stat-value">{{ formatYear(user?.createdAt) }}</span>
               </div>
               <div class="stat-item">
-                <span class="stat-label">Total Quizzes</span>
+                <span class="stat-label">Вкупно квизови</span>
                 <span class="stat-value">0</span>
               </div>
               <div class="stat-item">
-                <span class="stat-label">Points Earned</span>
-                <span class="stat-value">0 pts</span>
+                <span class="stat-label">Поени заработени</span>
+                <span class="stat-value">0 поени</span>
               </div>
             </div>
 
             <!-- Quick Actions -->
             <div class="eco-card actions-card">
-              <h3 class="card-title mb-3">Quick Actions</h3>
+              <h3 class="card-title mb-3">Брзи акции</h3>
               <div class="d-grid gap-2">
                 <button class="btn btn-outline-primary btn-sm" @click="goToQuizzes">
-                  <i class="bi bi-question-circle"></i> Take a Quiz
+                  <i class="bi bi-question-circle"></i> Направи квиз
                 </button>
                 <button class="btn btn-outline-success btn-sm" @click="goToNews">
-                  <i class="bi bi-newspaper"></i> Latest News
+                  <i class="bi bi-newspaper"></i> Најнови вести
                 </button>
                 <button class="btn btn-outline-info btn-sm" @click="goToGames">
-                  <i class="bi bi-joystick"></i> Play Games
+                  <i class="bi bi-joystick"></i> Игри
                 </button>
                 <button class="btn btn-outline-danger btn-sm" @click="handleLogout">
-                  <i class="bi bi-box-arrow-right"></i> Logout
+                  <i class="bi bi-box-arrow-right"></i> Одјави се
                 </button>
               </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Change Password Section -->
-    <section class="eco-section bg-light">
-      <div class="container">
-        <div class="row">
-          <div class="col-12 col-md-6 mx-auto">
-            <div class="eco-card">
-              <h2 class="card-title mb-4">Security</h2>
-
-              <form @submit.prevent="changePassword" class="password-form">
-                <div class="mb-3">
-                  <label for="currentPassword" class="form-label">Current Password</label>
-                  <input
-                    id="currentPassword"
-                    v-model="passwordForm.current"
-                    type="password"
-                    class="form-control"
-                    placeholder="Enter current password"
-                  />
-                </div>
-
-                <div class="mb-3">
-                  <label for="newPassword" class="form-label">New Password</label>
-                  <input
-                    id="newPassword"
-                    v-model="passwordForm.new"
-                    type="password"
-                    class="form-control"
-                    placeholder="Enter new password"
-                  />
-                </div>
-
-                <div class="mb-3">
-                  <label for="confirmPassword" class="form-label">Confirm Password</label>
-                  <input
-                    id="confirmPassword"
-                    v-model="passwordForm.confirm"
-                    type="password"
-                    class="form-control"
-                    placeholder="Confirm new password"
-                  />
-                </div>
-
-                <div v-if="passwordError" class="alert alert-danger alert-dismissible fade show">
-                  {{ passwordError }}
-                  <button
-                    type="button"
-                    class="btn-close"
-                    @click="passwordError = null"
-                  ></button>
-                </div>
-
-                <button
-                  type="submit"
-                  class="btn eco-btn-primary w-100"
-                  :disabled="isChangingPassword"
-                >
-                  <span v-if="!isChangingPassword">Update Password</span>
-                  <span v-else>
-                    <span
-                      class="spinner-border spinner-border-sm me-2"
-                      role="status"
-                      aria-hidden="true"
-                    ></span>
-                    Updating...
-                  </span>
-                </button>
-              </form>
             </div>
           </div>
         </div>
@@ -303,6 +304,7 @@ const editError = ref(null);
 const editSuccess = ref(false);
 const isChangingPassword = ref(false);
 const passwordError = ref(null);
+const showPasswordSection = ref(false);
 
 const editForm = ref({
   firstName: user.value?.firstName || '',
@@ -346,6 +348,10 @@ function formatDate(dateString) {
   }
 }
 
+function togglePasswordSection() {
+  showPasswordSection.value = !showPasswordSection.value;
+}
+
 function formatYear(dateString) {
   if (!dateString) return 'Unknown';
   try {
@@ -358,6 +364,7 @@ function formatYear(dateString) {
 function toggleEditMode() {
   if (isEditing.value) {
     isEditing.value = false;
+    showPasswordSection.value = false;
   } else {
     editForm.value = {
       firstName: user.value?.firstName || '',
@@ -365,6 +372,7 @@ function toggleEditMode() {
       email: user.value?.email || '',
     };
     editError.value = null;
+    showPasswordSection.value = false;
     isEditing.value = true;
   }
 }
@@ -373,6 +381,12 @@ function cancelEdit() {
   isEditing.value = false;
   editError.value = null;
   editSuccess.value = false;
+  showPasswordSection.value = false;
+  passwordForm.value = {
+    current: '',
+    new: '',
+    confirm: '',
+  };
 }
 
 async function saveProfile() {
@@ -394,7 +408,7 @@ async function saveProfile() {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to update profile');
+      throw new Error('Неможе да се ажурира профилот');
     }
 
     const updatedUser = await response.json();
@@ -410,7 +424,7 @@ async function saveProfile() {
       editSuccess.value = false;
     }, 3000);
   } catch (error) {
-    editError.value = error.message || 'Failed to update profile';
+    editError.value = error.message || 'Неможе да се ажурира профилот';
   } finally {
     isSaving.value = false;
   }
@@ -418,12 +432,12 @@ async function saveProfile() {
 
 async function changePassword() {
   if (passwordForm.value.new !== passwordForm.value.confirm) {
-    passwordError.value = 'Passwords do not match';
+    passwordError.value = 'Лозинките не се совпаѓаат';
     return;
   }
 
   if (passwordForm.value.new.length < 6) {
-    passwordError.value = 'Password must be at least 6 characters';
+    passwordError.value = 'Лозинката мора да има најмалку 6 знаци';
     return;
   }
 
@@ -444,7 +458,7 @@ async function changePassword() {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to change password');
+      throw new Error('Неможе да се промени лозинката');
     }
 
     passwordForm.value = {
@@ -452,9 +466,9 @@ async function changePassword() {
       new: '',
       confirm: '',
     };
-    alert('Password changed successfully!');
+    alert('Лозинката е успешно изменета!');
   } catch (error) {
-    passwordError.value = error.message || 'Failed to change password';
+    passwordError.value = error.message || 'Неможе да се промени лозинката';
   } finally {
     isChangingPassword.value = false;
   }
@@ -473,7 +487,7 @@ function goToGames() {
 }
 
 function handleLogout() {
-  if (confirm('Are you sure you want to logout?')) {
+  if (confirm('Дали сте сигурни дека сакате да се одјавите?')) {
     authStore.logout();
     router.push('/login');
   }
@@ -873,7 +887,7 @@ onMounted(() => {
   padding: 0.95rem 1.2rem;
   font-size: 0.95rem;
   transition: var(--transition);
-  border: 2px solid transparent;
+  border: 2px solid;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -881,35 +895,86 @@ onMounted(() => {
   text-transform: uppercase;
   letter-spacing: 0.5px;
   font-size: 0.9rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.actions-card .btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.2);
+  transition: left 0.4s;
+  z-index: 0;
+}
+
+.actions-card .btn > * {
+  position: relative;
+  z-index: 1;
 }
 
 .actions-card .btn:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.actions-card .btn:hover::before {
+  left: 100%;
+}
+
+.actions-card .btn-outline-primary {
+  color: #6b8e23;
+  border-color: #6b8e23;
+  background-color: transparent;
 }
 
 .actions-card .btn-outline-primary:hover {
-  background-color: var(--eco-light);
-  border-color: var(--eco-light);
+  background-color: #6b8e23;
+  border-color: #6b8e23;
   color: white;
+  box-shadow: 0 8px 24px rgba(107, 142, 35, 0.4);
+}
+
+.actions-card .btn-outline-success {
+  color: #27ae60;
+  border-color: #27ae60;
+  background-color: transparent;
 }
 
 .actions-card .btn-outline-success:hover {
   background-color: #27ae60;
   border-color: #27ae60;
   color: white;
+  box-shadow: 0 8px 24px rgba(39, 174, 96, 0.4);
+}
+
+.actions-card .btn-outline-info {
+  color: #3498db;
+  border-color: #3498db;
+  background-color: transparent;
 }
 
 .actions-card .btn-outline-info:hover {
   background-color: #3498db;
   border-color: #3498db;
   color: white;
+  box-shadow: 0 8px 24px rgba(52, 152, 219, 0.4);
+}
+
+.actions-card .btn-outline-danger {
+  color: #e74c3c;
+  border-color: #e74c3c;
+  background-color: transparent;
 }
 
 .actions-card .btn-outline-danger:hover {
   background-color: #e74c3c;
   border-color: #e74c3c;
   color: white;
+  box-shadow: 0 8px 24px rgba(231, 76, 60, 0.4);
 }
 
 /* ============ PRIMARY BUTTONS ============ */
@@ -959,6 +1024,65 @@ onMounted(() => {
   cursor: not-allowed;
   transform: none;
   box-shadow: var(--shadow-sm);
+}
+
+/* ============ PASSWORD TOGGLE SECTION ============ */
+.password-toggle-section {
+  margin: 2rem 0;
+  padding: 1rem 0;
+  border-top: 2px solid #f0f0f0;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.password-toggle-section .btn {
+  border-radius: 12px;
+  font-weight: 600;
+  transition: var(--transition);
+  border: 2px solid #ddd;
+  color: #5a8d3a;
+}
+
+.password-toggle-section .btn:hover {
+  background-color: #f9fbf6;
+  border-color: #7aa84a;
+  color: #7aa84a;
+}
+
+/* ============ PASSWORD SECTION EDIT ============ */
+.password-section-edit {
+  background: linear-gradient(135deg, #f9fbf6 0%, #f5f8f2 100%);
+  padding: 2rem;
+  border-radius: 12px;
+  border-left: 4px solid #7aa84a;
+  animation: slideDown 0.3s ease-out;
+}
+
+.password-section-edit .form-label {
+  font-weight: 700;
+  color: #5a8d3a;
+  font-size: 0.95rem;
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.password-section-edit .form-control {
+  border-radius: 12px;
+  border: 2px solid #e8f0e8;
+  padding: 0.95rem 1.25rem;
+  font-size: 1rem;
+  transition: var(--transition);
+  background-color: #ffffff;
+}
+
+.password-section-edit .form-control:focus {
+  border-color: #7aa84a;
+  background-color: white;
+  box-shadow: 0 0 0 0.35rem rgba(122, 168, 74, 0.15);
+}
+
+.password-section-edit .form-control:hover {
+  border-color: #d0e8d0;
 }
 
 /* ============ PASSWORD FORM ============ */
@@ -1170,16 +1294,16 @@ onMounted(() => {
 /* ============ DARK MODE SUPPORT (Optional) ============ */
 @media (prefers-color-scheme: dark) {
   .profile-container {
-    background: linear-gradient(135deg, #1a1a1a 0%, #252525 100%);
+    background: linear-gradient(135deg, #e8f0e0 0%, #f0f5eb 100%);
   }
 
   .eco-card {
-    background: #2a2a2a;
+    background: #f5f9f3;
     border-color: rgba(107, 142, 35, 0.2);
   }
 
   .profile-display .info-row {
-    border-bottom-color: #3a3a3a;
+    border-bottom-color: #e0e8d8;
   }
 
   .profile-display .info-row:hover {
@@ -1187,17 +1311,17 @@ onMounted(() => {
   }
 
   .info-label {
-    color: #a0b88f;
+    color: #5a8d3a;
   }
 
   .info-value {
-    color: #e0e0e0;
+    color: #2c3e50;
   }
 
   .profile-edit .form-control {
-    background-color: #1a1a1a;
+    background-color: #fafcfa;
     border-color: rgba(107, 142, 35, 0.2);
-    color: #e0e0e0;
+    color: #2c3e50;
   }
 
   .profile-edit .form-control:focus {
