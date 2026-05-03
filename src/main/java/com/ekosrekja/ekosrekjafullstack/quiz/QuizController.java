@@ -16,6 +16,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -130,6 +133,63 @@ public class QuizController {
         subRepo.save(sub);
 
         return new dto.QuizResultDto(score, questions.size(), details);
+    }
+
+    /**
+     * Create a new quiz (Admin only)
+     */
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping
+    public ResponseEntity<Quiz> createQuiz(@RequestBody Quiz quiz) {
+        quiz.setActive(true);
+        Quiz saved = quizRepo.save(quiz);
+        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+    }
+
+    /**
+     * Update an existing quiz (Admin only)
+     */
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{id}")
+    public ResponseEntity<Quiz> updateQuiz(@PathVariable Long id, @RequestBody Quiz quizDetails) {
+        return quizRepo.findById(id)
+                .map(quiz -> {
+                    quiz.setTitle(quizDetails.getTitle());
+                    quiz.setDescription(quizDetails.getDescription());
+                    quiz.setLevel(quizDetails.getLevel());
+                    quiz.setTimeMinutes(quizDetails.getTimeMinutes());
+                    quiz.setActive(quizDetails.isActive());
+                    return ResponseEntity.ok(quizRepo.save(quiz));
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    /**
+     * Delete a quiz (Admin only)
+     */
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteQuiz(@PathVariable Long id) {
+        return quizRepo.findById(id)
+                .map(quiz -> {
+                    quizRepo.delete(quiz);
+                    return ResponseEntity.noContent().<Void>build();
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    /**
+     * Toggle quiz active status (Admin only)
+     */
+    @PreAuthorize("hasRole('ADMIN')")
+    @PatchMapping("/{id}/toggle")
+    public ResponseEntity<Quiz> toggleQuizStatus(@PathVariable Long id) {
+        return quizRepo.findById(id)
+                .map(quiz -> {
+                    quiz.setActive(!quiz.isActive());
+                    return ResponseEntity.ok(quizRepo.save(quiz));
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 }
 

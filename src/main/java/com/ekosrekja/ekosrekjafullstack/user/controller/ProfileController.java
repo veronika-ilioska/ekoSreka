@@ -1,6 +1,7 @@
 package com.ekosrekja.ekosrekjafullstack.user.controller;
 
 
+import com.ekosrekja.ekosrekjafullstack.admin.AdminRepository;
 import com.ekosrekja.ekosrekjafullstack.user.dto.ChangePasswordRequest;
 import com.ekosrekja.ekosrekjafullstack.user.dto.UserResponse;
 import com.ekosrekja.ekosrekjafullstack.user.entity.User;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 public class ProfileController {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AdminRepository adminRepository;
 
     @GetMapping
     public ResponseEntity<UserResponse> getCurrentUserProfile() {
@@ -39,12 +41,25 @@ public class ProfileController {
     }
 
     @PutMapping
-    public ResponseEntity<UserResponse> updateProfile(@RequestBody UserResponse userResponse) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String username = authentication.getName();
+    public ResponseEntity<UserResponse> updateCurrentProfile(
+            @RequestHeader(value = "X-User-Id", required = false) Long userId,
+            @RequestBody UserResponse userResponse) {
+        User user = resolveCurrentUser(userId);
 
-        User user = userRepository.findByUsername(username)
+        return updateUserProfile(user, userResponse);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<UserResponse> updateProfile(
+            @PathVariable Long id,
+            @RequestBody UserResponse userResponse) {
+        User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
+
+        return updateUserProfile(user, userResponse);
+    }
+
+    private ResponseEntity<UserResponse> updateUserProfile(User user, UserResponse userResponse) {
 
         if (userResponse.getFirstName() != null) {
             user.setFirstName(userResponse.getFirstName());
@@ -73,12 +88,25 @@ public class ProfileController {
     }
 
     @PostMapping("/change-password")
-    public ResponseEntity<String> changePassword(@RequestBody ChangePasswordRequest request) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String username = authentication.getName();
+    public ResponseEntity<String> changeCurrentPassword(
+            @RequestHeader(value = "X-User-Id", required = false) Long userId,
+            @RequestBody ChangePasswordRequest request) {
+        User user = resolveCurrentUser(userId);
 
-        User user = userRepository.findByUsername(username)
+        return changeUserPassword(user, request);
+    }
+
+    @PostMapping("/{id}/change-password")
+    public ResponseEntity<String> changePassword(
+            @PathVariable Long id,
+            @RequestBody ChangePasswordRequest request) {
+        User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
+
+        return changeUserPassword(user, request);
+    }
+
+    private ResponseEntity<String> changeUserPassword(User user, ChangePasswordRequest request) {
 
         // Verify current password
         if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
@@ -92,6 +120,19 @@ public class ProfileController {
         return ResponseEntity.ok("Password changed successfully");
     }
 
+    private User resolveCurrentUser(Long userId) {
+        if (userId != null) {
+            return userRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+        }
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
+
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+    }
+
     private UserResponse mapToUserResponse(User user) {
         return UserResponse.builder()
                 .id(user.getId())
@@ -100,6 +141,7 @@ public class ProfileController {
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
                 .createdAt(user.getCreatedAt())
+                .isAdmin(Boolean.TRUE.equals(user.getIsAdmin()) || adminRepository.existsByUserId(user.getId()))
                 .build();
     }
 }

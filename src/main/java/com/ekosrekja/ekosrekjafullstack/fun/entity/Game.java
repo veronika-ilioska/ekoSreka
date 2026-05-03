@@ -2,9 +2,13 @@ package com.ekosrekja.ekosrekjafullstack.fun.entity;
 
 import com.ekosrekja.ekosrekjafullstack.fun.Difficulty;
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 
 @Entity
 @Table(name = "games")
+@Getter
+@Setter
 public class Game {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

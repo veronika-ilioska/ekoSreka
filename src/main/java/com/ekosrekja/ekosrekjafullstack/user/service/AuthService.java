@@ -5,6 +5,7 @@ import com.ekosrekja.ekosrekjafullstack.user.dto.SignupRequest;
 import com.ekosrekja.ekosrekjafullstack.user.dto.UserResponse;
 import com.ekosrekja.ekosrekjafullstack.user.entity.User;
 import com.ekosrekja.ekosrekjafullstack.user.repository.UserRepository;
+import com.ekosrekja.ekosrekjafullstack.admin.AdminRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -15,6 +16,8 @@ public class AuthService {
     @Autowired private UserRepository userRepository;
 
     @Autowired private PasswordEncoder passwordEncoder;
+
+    @Autowired private AdminRepository adminRepository;
 
     public UserResponse signup(SignupRequest signupRequest) {
         // Check if user already exists
@@ -74,6 +77,7 @@ public class AuthService {
         response.setFirstName(user.getFirstName());
         response.setLastName(user.getLastName());
         response.setCreatedAt(user.getCreatedAt());
+        response.setIsAdmin(Boolean.TRUE.equals(user.getIsAdmin()) || adminRepository.existsByUserId(user.getId()));
         return response;
     }
 }

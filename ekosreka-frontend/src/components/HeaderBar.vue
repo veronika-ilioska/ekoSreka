@@ -71,6 +71,11 @@
                     <i class="bi bi-gear me-2"></i>Поставки
                   </RouterLink>
                 </li>
+                <li>
+                  <RouterLink class="dropdown-item" to="/admin">
+                    <i class="bi bi-shield-check me-2"></i>Admin
+                  </RouterLink>
+                </li>
                 <li><hr class="dropdown-divider" /></li>
                 <li>
                   <button class="dropdown-item text-danger" @click="handleLogout">

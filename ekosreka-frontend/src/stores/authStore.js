@@ -9,6 +9,7 @@ export const useAuthStore = defineStore('auth', () => {
   const error = ref(null);
 
   const isAuthenticated = computed(() => !!userId.value);
+  const isAdmin = computed(() => Boolean(user.value?.isAdmin));
   const userName = computed(() => {
     if (user.value?.username) return user.value.username;
     if (user.value?.firstName) return user.value.firstName;
@@ -61,6 +62,16 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null;
   }
 
+  function updateUser(updatedUser) {
+    user.value = updatedUser;
+    userId.value = updatedUser?.id ? String(updatedUser.id) : null;
+
+    if (updatedUser?.id) {
+      localStorage.setItem('userId', updatedUser.id);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+    }
+  }
+
   function clearError() {
     error.value = null;
   }
@@ -71,10 +82,12 @@ export const useAuthStore = defineStore('auth', () => {
     loading,
     error,
     isAuthenticated,
+    isAdmin,
     userName,
     login,
     signup,
     logout,
+    updateUser,
     clearError,
   };
 });

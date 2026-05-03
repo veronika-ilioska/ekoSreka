@@ -23,6 +23,8 @@ public class UserResponse {
 
     private Long createdAt;
 
+    private Boolean isAdmin;
+
 
     public String getFullName() {
         if (firstName != null && lastName != null) {

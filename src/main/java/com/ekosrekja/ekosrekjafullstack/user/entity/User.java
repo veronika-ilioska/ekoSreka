@@ -46,6 +46,9 @@ public class User implements UserDetails {
 
     private Boolean credentialsNonExpired = true;
 
+    @Column(name = "is_admin")
+    private Boolean isAdmin = false;
+
     @Column(name = "created_at")
     private Long createdAt;
 
@@ -65,6 +68,9 @@ public class User implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
+        if (isAdmin != null && isAdmin) {
+            return Collections.singletonList(new SimpleGrantedAuthority("ROLE_ADMIN"));
+        }
         return Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"));
     }
 
