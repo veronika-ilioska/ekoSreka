@@ -1,61 +1,45 @@
 <template>
-  <section class="eco-section eco-fun">
-    <div class="container">
-     
-      <div class="fun-grid">
-        <!-- Фотографии -->
-        <RouterLink to="/photos" class="fun-card" aria-label="Отвори фотографии">
-          <div class="fun-card__bg fun-card__bg--photos" />
-          <div class="fun-card__content">
-            <span class="fun-icon" aria-hidden="true" v-html="icons.camera"></span>
-            <h3 class="fun-title">Фотографии</h3>
-            <p class="fun-sub">Приказни во слики од природата</p>
-            <div class="fun-meta">
-              <span class="badge">{{ counts.photos }} записи</span>
-              <span class="cta">Отвори</span>
-            </div>
-          </div>
-        </RouterLink>
+  <section class="fun-page">
+    <div class="fun-shell">
+      <header class="fun-hero">
+        <div class="hero-copy">
+          <span class="hero-kicker">Eco activities</span>
+          <h1>Explore, play, and learn in a greener way</h1>
+          <p>
+            Discover nature photos, short videos, eco horoscope tips, and home-friendly games
+            collected in one calm little activity hub.
+          </p>
+        </div>
 
-        <!-- Видеа -->
-        <RouterLink to="/videos" class="fun-card" aria-label="Отвори видеа">
-          <div class="fun-card__bg fun-card__bg--videos" />
-          <div class="fun-card__content">
-            <span class="fun-icon" aria-hidden="true" v-html="icons.video"></span>
-            <h3 class="fun-title">Видеа</h3>
-            <p class="fun-sub">Кратки клипови и документарци</p>
-            <div class="fun-meta">
-              <span class="badge">{{ counts.videos }} записи</span>
-              <span class="cta">Отвори</span>
-            </div>
+        <div class="hero-panel" aria-label="Fun content summary">
+          <div class="hero-stat">
+            <strong>{{ totalCount }}</strong>
+            <span>total items</span>
           </div>
-        </RouterLink>
-
-        <!-- Хороскоп -->
-        <RouterLink to="/horoscope" class="fun-card" aria-label="Отвори хороскоп">
-          <div class="fun-card__bg fun-card__bg--horoscope" />
-          <div class="fun-card__content">
-            <span class="fun-icon" aria-hidden="true" v-html="icons.zodiac"></span>
-            <h3 class="fun-title">Хороскоп</h3>
-            <p class="fun-sub">Еко совети според знакот</p>
-            <div class="fun-meta">
-              <span class="badge">{{ counts.horoscope }} записи</span>
-              <span class="cta">Отвори</span>
-            </div>
+          <div class="hero-stat">
+            <strong>{{ readyCount }}</strong>
+            <span>sections ready</span>
           </div>
-        </RouterLink>
+        </div>
+      </header>
 
-        <!-- Забавни игри дома -->
-        <RouterLink to="/games" class="fun-card" aria-label="Отвори игри">
-          <div class="fun-card__bg fun-card__bg--games" />
-          <div class="fun-card__content">
-            <span class="fun-icon" aria-hidden="true" v-html="icons.gamepad"></span>
-            <h3 class="fun-title">Забавни игри за дома</h3>
-            <p class="fun-sub">Мини-игри и предизвици за секого</p>
-            <div class="fun-meta">
-              <span class="badge">{{ counts.games }} записи</span>
-              <span class="cta">Отвори</span>
+      <div class="activity-grid">
+        <RouterLink
+          v-for="activity in activities"
+          :key="activity.key"
+          :to="activity.to"
+          class="activity-card"
+          :aria-label="`Open ${activity.title}`"
+        >
+          <img class="activity-image" :src="activity.image" :alt="activity.title" />
+          <div class="activity-content">
+            <div class="activity-topline">
+              <span class="activity-tag">{{ activity.tag }}</span>
+              <span class="activity-count">{{ formatCount(activity.key) }}</span>
             </div>
+            <h2>{{ activity.title }}</h2>
+            <p>{{ activity.description }}</p>
+            <span class="activity-action">Open section</span>
           </div>
         </RouterLink>
       </div>
@@ -64,176 +48,294 @@
 </template>
 
 <script setup>
-import { onMounted, reactive } from 'vue'
+  import { computed, onMounted, reactive } from 'vue';
+  import { api } from '../api';
+  import beforeImage from '../img/before1.jpg';
+  import afterImage from '../img/after1.jpg';
+  import gameImage from '../img/game.png';
+  import quizImage from '../img/quiz.png';
 
-const ENDPOINTS = {
-  photos: 'api/media/photos/count',
-  videos: 'api/media/videos/count',
-  horoscope: 'api/horoscope/count',
-  games: 'api/games/count',
-}
+  const ENDPOINTS = {
+    photos: '/media/photos/count',
+    videos: '/media/videos/count',
+    horoscope: '/horoscope/count',
+    games: '/games/count',
+  };
 
-const counts = reactive({ photos: 0, videos: 0, horoscope: 0, games: 0 })
+  const counts = reactive({
+    photos: 0,
+    videos: 0,
+    horoscope: 0,
+    games: 0,
+  });
 
-async function fetchCount(key) {
-  try {
-    const res = await fetch(ENDPOINTS[key], { headers: { Accept: 'application/json' } })
-    if (!res.ok) {
-      // види точно зошто е 400
-      const t = await res.text()
-      console.error(key, res.status, t)
-      throw new Error(`HTTP ${res.status}`)
-    }
-    const data = await res.json()
-    const n = typeof data === 'number' ? data : Number(data?.count ?? data?.total ?? 0)
-    counts[key] = Number.isFinite(n) ? n : 0
-  } catch (e) {
-    counts[key] = 0
+  const activities = [
+    {
+      key: 'photos',
+      to: '/photos',
+      title: 'Photos',
+      tag: 'Nature gallery',
+      description: 'Browse visual stories from cleanups, landscapes, and everyday eco moments.',
+      image: beforeImage,
+    },
+    {
+      key: 'videos',
+      to: '/videos',
+      title: 'Videos',
+      tag: 'Watch and learn',
+      description: 'Short clips and useful eco content for quick inspiration between tasks.',
+      image: afterImage,
+    },
+    {
+      key: 'horoscope',
+      to: '/horoscope',
+      title: 'Eco horoscope',
+      tag: 'Daily tip',
+      description: 'A playful way to find a small sustainable action for your sign.',
+      image: quizImage,
+    },
+    {
+      key: 'games',
+      to: '/games',
+      title: 'Home games',
+      tag: 'Challenges',
+      description: 'Mini games and simple challenges that make eco habits easier to remember.',
+      image: gameImage,
+    },
+  ];
+
+  const totalCount = computed(() => Object.values(counts).reduce((sum, count) => sum + count, 0));
+
+  const readyCount = computed(() => Object.values(counts).filter((count) => count > 0).length);
+
+  function normalizeCount(data) {
+    const value = typeof data === 'number' ? data : Number(data?.count ?? data?.total ?? 0);
+    return Number.isFinite(value) ? value : 0;
   }
-}
 
-onMounted(() => Promise.all(Object.keys(ENDPOINTS).map(fetchCount)))
-// Минимални SVG икони
-const icons = {
-  camera: `
-    <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor">
-      <path d="M9.5 4h5l1 2H20a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l1.5-2z"/>
-      <circle cx="12" cy="13" r="4" fill="white"/><circle cx="12" cy="13" r="2.5"/>
-    </svg>`,
-  video: `
-    <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor">
-      <path d="M3 6h12a2 2 0 0 1 2 2v1.5l4-2.5v10l-4-2.5V16a2 2 0 0 1-2 2H3z"/>
-    </svg>`,
-  zodiac: `
-    <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor">
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 3v18M3 12h18" stroke="white" stroke-width="1.5"/>
-    </svg>`,
-  gamepad: `
-    <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor">
-      <path d="M6 9h12a4 4 0 1 1-2.8 6.8L14 15H10l-1.2.8A4 4 0 1 1 6 9z"/>
-      <path d="M8 12h2M9 11v2M16 11.5h1M18 13.5h1" stroke="white" stroke-width="1.5" />
-    </svg>`,
-}
+  function formatCount(key) {
+    const count = counts[key] ?? 0;
+    return `${count} ${count === 1 ? 'item' : 'items'}`;
+  }
+
+  async function fetchCount(key) {
+    try {
+      const { data } = await api.get(ENDPOINTS[key]);
+      counts[key] = normalizeCount(data);
+    } catch (error) {
+      counts[key] = 0;
+    }
+  }
+
+  onMounted(() => Promise.all(Object.keys(ENDPOINTS).map(fetchCount)));
 </script>
 
 <style scoped>
-.eco-section {
-  padding: clamp(28px, 3.5vw, 48px) 0;
-}
+  .fun-page {
+    color: var(--eco-text-dark);
+    padding: 1rem 0 4rem;
+  }
 
-.eco-section-title {
-  font-size: clamp(24px, 3.2vw, 36px);
-  margin-bottom: 8px;
-  line-height: 1.2;
-}
+  .fun-shell {
+    margin: 0 auto;
+    max-width: 1120px;
+  }
 
-.eco-muted {
-  color: var(--eco-muted, #6b7280);
-  margin-bottom: 24px;
-}
+  .fun-hero {
+    align-items: stretch;
+    background:
+      linear-gradient(135deg, rgba(69, 128, 81, 0.94), rgba(102, 187, 106, 0.86)),
+      url('../img/after1.jpg') center / cover;
+    border-radius: 8px;
+    color: #fff;
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    margin-bottom: 1.5rem;
+    min-height: 280px;
+    overflow: hidden;
+    padding: clamp(1.5rem, 4vw, 2.5rem);
+  }
 
-.container {
-  max-width: 1120px;
-  margin: 0 auto;
-  padding: 0 16px;
-}
+  .hero-copy {
+    align-self: end;
+    max-width: 680px;
+  }
 
-.fun-grid {
-  display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  gap: 18px;
-}
+  .hero-kicker {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.75rem;
+    text-transform: uppercase;
+  }
 
-.fun-card {
-  grid-column: span 12;
-  position: relative;
-  display: block;
-  overflow: hidden;
-  border-radius: 18px;
-  min-height: 170px;
-  color: #fff;
-  text-decoration: none;
-  box-shadow: 0 10px 24px rgba(0,0,0,.18);
-  transition: transform .25s ease, box-shadow .25s ease;
-}
+  .hero-copy h1 {
+    font-size: clamp(2rem, 5vw, 4rem);
+    font-weight: 800;
+    letter-spacing: 0;
+    line-height: 1.02;
+    margin: 0 0 1rem;
+    max-width: 760px;
+  }
 
-@media (min-width: 640px) {
-  .fun-card { grid-column: span 6; }
-}
-@media (min-width: 992px) {
-  .fun-card { grid-column: span 3; }
-}
+  .hero-copy p {
+    font-size: 1.05rem;
+    line-height: 1.7;
+    margin: 0;
+    max-width: 620px;
+    opacity: 0.94;
+  }
 
-.fun-card:hover { transform: translateY(-4px); box-shadow: 0 14px 28px rgba(0,0,0,.22); }
+  .hero-panel {
+    align-self: end;
+    display: grid;
+    gap: 0.75rem;
+  }
 
-.fun-card__bg {
-  position: absolute; inset: 0;
-  background-size: cover; background-position: center;
-  filter: brightness(.85);
-  z-index: 0;
-}
+  .hero-stat {
+    background: rgba(255, 255, 255, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    padding: 1rem;
+  }
 
-.fun-card__bg--photos {
-  background-image: linear-gradient(135deg, #0ea5e9, #22c55e);
-}
-.fun-card__bg--videos {
-  background-image: linear-gradient(135deg, #8b5cf6, #ef4444);
-}
-.fun-card__bg--horoscope {
-  background-image: linear-gradient(135deg, #06b6d4, #3b82f6);
-}
-.fun-card__bg--games {
-  background-image: linear-gradient(135deg, #f59e0b, #84cc16);
-}
+  .hero-stat strong {
+    display: block;
+    font-size: 2rem;
+    line-height: 1;
+  }
 
-.fun-card__content {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  gap: 6px;
-  padding: 18px;
-}
+  .hero-stat span {
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 700;
+    margin-top: 0.35rem;
+    opacity: 0.85;
+    text-transform: uppercase;
+  }
 
-.fun-icon {
-  display: inline-flex;
-  padding: 10px;
-  border-radius: 14px;
-  background: rgba(255,255,255,.18);
-  backdrop-filter: blur(4px);
-  line-height: 0;
-  width: 44px; height: 44px;
-}
+  .activity-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(12, 1fr);
+  }
 
-.fun-title {
-  margin: 6px 0 0;
-  font-weight: 700;
-}
+  .activity-card {
+    background: var(--eco-card-bg);
+    border: 1px solid rgba(69, 128, 81, 0.14);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(27, 42, 27, 0.08);
+    color: inherit;
+    display: grid;
+    grid-column: span 6;
+    grid-template-columns: 42% 1fr;
+    min-height: 230px;
+    overflow: hidden;
+    text-decoration: none;
+    transition:
+      box-shadow 0.2s ease,
+      transform 0.2s ease;
+  }
 
-.fun-sub {
-  margin: 0;
-  opacity: .95;
-  font-size: .95rem;
-}
+  .activity-card:hover {
+    box-shadow: 0 14px 30px rgba(27, 42, 27, 0.16);
+    transform: translateY(-3px);
+  }
 
-.fun-meta {
-  margin-top: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
+  .activity-image {
+    height: 100%;
+    min-height: 230px;
+    object-fit: cover;
+    width: 100%;
+  }
 
-.badge {
-  font-size: .86rem;
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: rgba(255,255,255,.16);
-}
+  .activity-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    padding: 1.25rem;
+  }
 
-.cta {
-  font-weight: 700;
-  text-transform: uppercase;
-  font-size: .8rem;
-  letter-spacing: .6px;
-}
+  .activity-topline {
+    align-items: center;
+    display: flex;
+    gap: 0.75rem;
+    justify-content: space-between;
+  }
+
+  .activity-tag,
+  .activity-count {
+    border-radius: 999px;
+    font-size: 0.74rem;
+    font-weight: 800;
+    padding: 0.32rem 0.65rem;
+    text-transform: uppercase;
+  }
+
+  .activity-tag {
+    background: rgba(102, 187, 106, 0.16);
+    color: #2e7d32;
+  }
+
+  .activity-count {
+    color: #506650;
+  }
+
+  .activity-content h2 {
+    color: #1b2a1b;
+    font-size: 1.45rem;
+    font-weight: 800;
+    letter-spacing: 0;
+    line-height: 1.15;
+    margin: 0;
+  }
+
+  .activity-content p {
+    color: #506650;
+    line-height: 1.55;
+    margin: 0;
+  }
+
+  .activity-action {
+    color: #2e7d32;
+    font-size: 0.86rem;
+    font-weight: 800;
+    margin-top: auto;
+    text-transform: uppercase;
+  }
+
+  @media (max-width: 991px) {
+    .fun-hero {
+      grid-template-columns: 1fr;
+    }
+
+    .hero-panel {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .activity-card {
+      grid-column: span 12;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .fun-hero {
+      min-height: 0;
+    }
+
+    .hero-panel {
+      grid-template-columns: 1fr;
+    }
+
+    .activity-card {
+      grid-template-columns: 1fr;
+    }
+
+    .activity-image {
+      aspect-ratio: 16 / 10;
+      min-height: 0;
+    }
+  }
 </style>

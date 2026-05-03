@@ -1,306 +1,445 @@
 <template>
-  <section v-if="quiz" class="quiz-wrap">
-   
-    <header class="hero" :style="{ '--bg': `url(${cover})` }">
-      <div class="shade"></div>
-      <div class="hero-content container">
-        <h1 class="title">{{ quiz.title }}</h1>
-        <p class="meta">
-          Ниво: {{ quiz.level }} · Време: {{ quiz.timeMinutes }} мин · Прашања: {{ totalQs }}
-        </p>
+  <section class="quiz-run-page">
+    <div class="quiz-run-shell">
+      <div v-if="loading" class="state-card">Loading quiz...</div>
+      <div v-else-if="loadError" class="alert alert-danger">{{ loadError }}</div>
 
-        <div v-if="!result" class="progress">
-          <div class="bar" :style="{ width: progressPct + '%' }"></div>
-        </div>
-        <div v-else class="score-pill">
-          Резултат: <strong>{{ result.score }}</strong>/<strong>{{ result.total }}</strong>
-        </div>
-      </div>
-    </header>
+      <template v-else-if="quiz">
+        <header class="run-hero">
+          <RouterLink class="back-link" to="/quizzes">Back to quizzes</RouterLink>
+          <h1>{{ quiz.title }}</h1>
+          <p>{{ quiz.description }}</p>
+          <div class="run-meta">
+            <span>{{ quiz.level }}</span>
+            <span>{{ quiz.timeMinutes || 5 }} min</span>
+            <span>{{ totalQs }} questions</span>
+          </div>
+          <div v-if="!result" class="progress-track" aria-label="Quiz progress">
+            <div class="progress-bar" :style="{ width: progressPct + '%' }"></div>
+          </div>
+        </header>
 
-    <div class="container content">
-   
-      <div v-if="!result">
-        <div
-          v-for="q in quiz.questions"
-          :key="q.id"
-          class="q-card"
-        >
-          <h5 class="q-title">Прашање: {{ q.text }}</h5>
+        <article v-if="!result" class="question-card">
+          <div class="question-topline">
+            <span>Question {{ currentIndex + 1 }} of {{ totalQs }}</span>
+            <span>{{ answeredCount }} answered</span>
+          </div>
+
+          <h2>{{ currentQuestion.text }}</h2>
 
           <div class="options">
             <label
-              v-for="o in q.options"
-              :key="o.id"
+              v-for="option in currentQuestion.options"
+              :key="option.id"
               class="option"
-              :class="{ selected: answers[q.id] === o.id }"
+              :class="{ selected: answers[currentQuestion.id] === option.id }"
             >
               <input
                 type="radio"
-                class="visually-hidden"
-                :name="`q_${q.id}`"
-                :value="o.id"
-                :checked="answers[q.id]===o.id"
-                @change="pick(q.id, o.id)"
+                :name="`q_${currentQuestion.id}`"
+                :value="option.id"
+                :checked="answers[currentQuestion.id] === option.id"
+                @change="pick(currentQuestion.id, option.id)"
               />
-              <span class="dot" aria-hidden="true"></span>
-              <span class="text">{{ o.text }}</span>
+              <span>{{ option.text }}</span>
             </label>
           </div>
-        </div>
 
-        <button
-          class="btn eco-btn submit"
-          :disabled="answeredCount < totalQs"
-          @click="submitQuiz"
-          title="Одговори на сите прашања за да испратиш"
-        >
-          Испрати
-        </button>
-      </div>
-
-      
-      <div v-else class="results">
-        <div
-          v-for="r in result.details"
-          :key="r.questionId"
-          class="res-item"
-          :class="r.correct ? 'ok' : 'bad'"
-        >
-          <div class="res-q">{{ questionText(r.questionId) }}</div>
-
-          <div class="res-a">
-            <span class="badge" :class="r.correct ? 'b-ok' : 'b-bad'">
-              {{ r.correct ? 'Точно' : 'Неточно' }}
-            </span>
-
-            <div class="answers">
-              <div class="row">
-                <span class="label">Твој одговор:</span>
-                <span class="value">{{ optionText(r.questionId, r.chosenOptionId) }}</span>
-              </div>
-              <div v-if="!r.correct" class="row">
-                <span class="label">Точен одговор:</span>
-                <span class="value">{{ optionText(r.questionId, r.correctOptionId) }}</span>
-              </div>
-            </div>
+          <div class="question-actions">
+            <button class="btn btn-outline-secondary" type="button" :disabled="currentIndex === 0" @click="previousQuestion">
+              Previous
+            </button>
+            <button
+              v-if="!isLastQuestion"
+              class="btn eco-btn"
+              type="button"
+              :disabled="!answers[currentQuestion.id]"
+              @click="nextQuestion"
+            >
+              Next
+            </button>
+            <button
+              v-else
+              class="btn eco-btn"
+              type="button"
+              :disabled="answeredCount < totalQs || submitting"
+              @click="submitQuiz"
+            >
+              {{ submitting ? 'Submitting...' : 'Submit quiz' }}
+            </button>
           </div>
-        </div>
+        </article>
 
-        <RouterLink to="/quizzes" class="btn outline back">Назад кон квизови</RouterLink>
-      </div>
+        <section v-else class="results-panel">
+          <div class="score-card">
+            <span>Your score</span>
+            <strong>{{ result.score }}/{{ result.total }}</strong>
+            <p>{{ scoreMessage }}</p>
+          </div>
+
+          <div class="result-list">
+            <article
+              v-for="detail in result.details"
+              :key="detail.questionId"
+              class="result-row"
+              :class="detail.correct ? 'correct' : 'incorrect'"
+            >
+              <div>
+                <h3>{{ questionText(detail.questionId) }}</h3>
+                <p>Your answer: {{ optionText(detail.questionId, detail.chosenOptionId) }}</p>
+                <p v-if="!detail.correct">Correct answer: {{ optionText(detail.questionId, detail.correctOptionId) }}</p>
+              </div>
+              <span>{{ detail.correct ? 'Correct' : 'Review' }}</span>
+            </article>
+          </div>
+
+          <div class="results-actions">
+            <button class="btn btn-outline-success" type="button" @click="restartQuiz">Try again</button>
+            <RouterLink class="btn eco-btn" to="/quizzes">Choose another quiz</RouterLink>
+          </div>
+        </section>
+      </template>
     </div>
   </section>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
-import { useRoute, RouterLink } from 'vue-router'
-import { api } from '../api'
+  import { computed, onMounted, ref } from 'vue';
+  import { RouterLink, useRoute } from 'vue-router';
+  import { api } from '../api';
 
-const route = useRoute()
-const quizId = Number(route.params.id)
+  const route = useRoute();
+  const quizId = Number(route.params.id);
 
-const quiz = ref(null)
-const answers = ref({})        
-const result = ref(null)       
+  const quiz = ref(null);
+  const answers = ref({});
+  const result = ref(null);
+  const currentIndex = ref(0);
+  const loading = ref(false);
+  const submitting = ref(false);
+  const loadError = ref('');
 
-onMounted(async () => {
-  const { data } = await api.get(`/quizzes/${quizId}`)
-  quiz.value = data
-})
+  const totalQs = computed(() => quiz.value?.questions?.length || 0);
+  const answeredCount = computed(() => Object.keys(answers.value).length);
+  const progressPct = computed(() =>
+    totalQs.value ? Math.round((answeredCount.value / totalQs.value) * 100) : 0
+  );
+  const currentQuestion = computed(() => quiz.value.questions[currentIndex.value]);
+  const isLastQuestion = computed(() => currentIndex.value >= totalQs.value - 1);
+  const scoreMessage = computed(() => {
+    if (!result.value?.total) return '';
+    const pct = result.value.score / result.value.total;
+    if (pct >= 0.8) return 'Excellent work. Your eco knowledge is looking strong.';
+    if (pct >= 0.5) return 'Good start. Review the missed answers and try again.';
+    return 'Keep going. Every quiz makes the next eco choice easier.';
+  });
 
+  function pick(questionId, optionId) {
+    answers.value = { ...answers.value, [questionId]: optionId };
+  }
 
-function pick(questionId, optionId){
-  answers.value = { ...answers.value, [questionId]: optionId }
-}
+  function nextQuestion() {
+    if (!isLastQuestion.value) currentIndex.value += 1;
+  }
 
+  function previousQuestion() {
+    if (currentIndex.value > 0) currentIndex.value -= 1;
+  }
 
-async function submitQuiz(){
-  const payload = Object.entries(answers.value).map(([qid, oid]) => ({
-    questionId: Number(qid),
-    optionId: Number(oid)
-  }))
-  const { data } = await api.post(`/quizzes/${quizId}/submit`, payload)
-  result.value = data
-}
+  async function submitQuiz() {
+    submitting.value = true;
+    try {
+      const payload = Object.entries(answers.value).map(([qid, oid]) => ({
+        questionId: Number(qid),
+        optionId: Number(oid),
+      }));
+      const { data } = await api.post(`/quizzes/${quizId}/submit`, payload);
+      result.value = data;
+    } finally {
+      submitting.value = false;
+    }
+  }
 
+  function restartQuiz() {
+    answers.value = {};
+    result.value = null;
+    currentIndex.value = 0;
+  }
 
-const cover = computed(() =>
-  quiz.value?.coverImage || quiz.value?.image || '/images/placeholders/quiz.jpg'
-)
+  function optionText(questionId, optionId) {
+    const question = quiz.value?.questions?.find((item) => item.id === questionId);
+    const option = question?.options?.find((item) => item.id === optionId);
+    return option?.text ?? 'No answer';
+  }
 
-const totalQs = computed(() => quiz.value?.questions?.length || 0)
-const answeredCount = computed(() => Object.keys(answers.value).length)
-const progressPct = computed(() =>
-  totalQs.value ? Math.round((answeredCount.value / totalQs.value) * 100) : 0
-)
+  function questionText(questionId) {
+    return quiz.value?.questions?.find((item) => item.id === questionId)?.text ?? '';
+  }
 
-function optionText(questionId, optionId){
-  const q = quiz.value?.questions?.find(x => x.id === questionId)
-  const o = q?.options?.find(x => x.id === optionId)
-  return o?.text ?? '—'
-}
-function questionText(questionId){
-  return quiz.value?.questions?.find(x => x.id === questionId)?.text ?? ''
-}
+  async function loadQuiz() {
+    loading.value = true;
+    loadError.value = '';
+
+    try {
+      const { data } = await api.get(`/quizzes/${quizId}`);
+      quiz.value = data;
+    } catch (error) {
+      loadError.value = 'Could not load this quiz.';
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  onMounted(loadQuiz);
 </script>
 
-
 <style scoped>
+  .quiz-run-page {
+    color: var(--eco-text-dark);
+    padding: 1rem 0 4rem;
+  }
 
-.hero{
-  position: relative;
-  background-image: var(--bg);
-  background-size: cover;
-  background-position: center;
-  min-height: 240px;
-  display: flex;
-  align-items: flex-end;
-  color: #fff;
-  isolation: isolate;
-}
-.shade{
-  position: absolute; inset: 0;
-  background: linear-gradient(180deg, rgba(0,0,0,.15) 0%, rgba(0,0,0,.45) 55%, rgba(0,0,0,.75) 100%);
-  z-index: 0;
-}
-.hero-content{
-  position: relative; z-index: 1;
-  padding: 28px 0;
-}
-.title{
-  margin: 0 0 6px 0;
-  font-weight: 900;
-  letter-spacing: .2px;
-  text-shadow: 0 2px 8px rgba(0,0,0,.35);
-}
-.meta{
-  margin: 0 0 14px 0;
-  opacity: .9;
-}
-.progress{
-  width: 100%; height: 8px; border-radius: 999px; overflow: hidden;
-  background: rgba(255,255,255,.25);
-}
-.progress .bar{
-  height: 100%; background: rgb(28, 150, 28);  
-  backdrop-filter: blur(1px);
-}
-.score-pill{
-  display: inline-block;
-  background: rgba(255,255,255,.18);
-  padding: 8px 14px; border-radius: 999px;
-  font-weight: 700;
-}
+  .quiz-run-shell {
+    margin: 0 auto;
+    max-width: 920px;
+  }
 
+  .run-hero,
+  .question-card,
+  .results-panel,
+  .state-card {
+    background: var(--eco-card-bg);
+    border: 1px solid rgba(69, 128, 81, 0.14);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(27, 42, 27, 0.08);
+  }
 
-.content{ padding: 28px 0 40px; }
+  .run-hero {
+    background:
+      linear-gradient(135deg, rgba(36, 77, 43, 0.95), rgba(69, 128, 81, 0.9)),
+      url('../img/quiz.png') center / cover;
+    color: #fff;
+    margin-bottom: 1rem;
+    padding: 2rem;
+  }
 
+  .back-link {
+    color: rgba(255, 255, 255, 0.88);
+    display: inline-block;
+    font-weight: 800;
+    margin-bottom: 1rem;
+    text-decoration: none;
+  }
 
-.q-card{
-  background: #fff;
-  border-radius: 16px;
-  padding: 18px;
-  margin-bottom: 14px;
-  box-shadow: 0 6px 18px rgba(0,0,0,.06);
-  border: 1px solid rgba(0,0,0,.06);
-}
-.q-title{ margin: 0 0 12px 0; }
+  .run-hero h1 {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 800;
+    letter-spacing: 0;
+    line-height: 1.05;
+    margin: 0 0 0.75rem;
+  }
 
+  .run-hero p {
+    line-height: 1.7;
+    margin: 0;
+    max-width: 680px;
+    opacity: 0.92;
+  }
 
-.options{ display: grid; gap: 10px; }
-.option{
-  display: flex; align-items: center; gap: 10px;
-  border: 1px solid #e6e8ec;
-  border-radius: 12px;
-  padding: 12px 14px;
-  cursor: pointer;
-  user-select: none;
-  transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
-  background: #fafbfc;
-}
-.option:hover{ border-color: #cbd5e1; background: #fff; }
-.option.selected{
-  border-color: #2bb673;
-  box-shadow: 0 6px 14px rgba(43,182,115,.18);
-  background: #f6fffa;
-}
-.dot{
-  width: 14px; height: 14px; border-radius: 50%;
-  border: 2px solid #7b8794; display: inline-block;
-}
-.option.selected .dot{ border-color: #2bb673; background: #2bb673; }
-.text{ line-height: 1.2; }
+  .run-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 1rem 0;
+  }
 
-.visually-hidden{
-  position: absolute !important; clip: rect(1px,1px,1px,1px);
-  height: 1px; width: 1px; overflow: hidden; white-space: nowrap;
-}
+  .run-meta span {
+    background: rgba(255, 255, 255, 0.16);
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 800;
+    padding: 0.4rem 0.75rem;
+    text-transform: uppercase;
+  }
 
+  .progress-track {
+    background: rgba(255, 255, 255, 0.24);
+    border-radius: 999px;
+    height: 9px;
+    overflow: hidden;
+  }
 
-.btn.eco-btn.submit{
-  margin-top: 12px; padding: 10px 18px; color: #fff;
-  background: #2bb673; border: none; border-radius: 10px;
-}
-.btn.eco-btn.submit:disabled{
-  opacity: .6; cursor: not-allowed;
-}
+  .progress-bar {
+    background: #b9f6ca;
+    height: 100%;
+    transition: width 0.2s ease;
+  }
 
+  .question-card,
+  .results-panel,
+  .state-card {
+    padding: 1.5rem;
+  }
 
-.results{ display: grid; gap: 12px; }
-.res-item{
-  border-radius: 14px; padding: 14px 16px;
-  border: 1px solid rgba(0,0,0,.06);
-  box-shadow: 0 6px 16px rgba(0,0,0,.05);
-}
-.res-item.ok{ background: rgba(43,182,115,.08); }
-.res-item.bad{ background: rgba(198,40,40,.08); }
+  .question-topline {
+    color: #506650;
+    display: flex;
+    font-size: 0.84rem;
+    font-weight: 800;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+  }
 
-.res-q{ font-weight: 700; margin-bottom: 8px; }
-.res-a{ display: grid; gap: 8px; }
+  .question-card h2 {
+    color: #1b2a1b;
+    font-size: 1.6rem;
+    font-weight: 800;
+    letter-spacing: 0;
+    line-height: 1.25;
+    margin: 0 0 1rem;
+  }
 
-.badge{
-  display: inline-block; padding: 4px 10px; border-radius: 999px;
-  font-size: .8rem; font-weight: 700;
-}
-.b-ok{ background: #2bb673; color: #fff; }
-.b-bad{ background: #c62828; color: #fff; }
+  .options {
+    display: grid;
+    gap: 0.75rem;
+  }
 
-.answers{ display: grid; gap: 4px; }
-.row{ display: flex; gap: 6px; flex-wrap: wrap; }
-.label{ opacity: .75; }
-.value{ font-weight: 600; }
+  .option {
+    align-items: center;
+    background: rgba(102, 187, 106, 0.08);
+    border: 1px solid rgba(69, 128, 81, 0.18);
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    gap: 0.8rem;
+    padding: 0.95rem 1rem;
+    transition:
+      background 0.2s ease,
+      border-color 0.2s ease;
+  }
 
-.btn.outline.back{
-  margin-top: 6px;
-  border: 1px solid #2bb673; color: #2bb673;
-  padding: 8px 14px; border-radius: 10px; display: inline-block;
-}
-.btn.outline.back:hover{ background: #e7f8f0; }
+  .option.selected {
+    background: rgba(102, 187, 106, 0.2);
+    border-color: #458051;
+  }
 
-.q-title {
-  margin: 0 0 12px 0;
-  font-weight: 600;
-  font-size: 1rem;
-  color: #212529; 
-}
+  .option input {
+    accent-color: #458051;
+  }
 
+  .option span {
+    color: #1b2a1b;
+    font-weight: 700;
+  }
 
-.option .text {
-  color: #212529; 
-  font-size: .95rem;
-}
+  .question-actions,
+  .results-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    margin-top: 1.25rem;
+  }
 
+  .score-card {
+    background: rgba(102, 187, 106, 0.12);
+    border: 1px solid rgba(69, 128, 81, 0.18);
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    padding: 1.25rem;
+    text-align: center;
+  }
 
-.label {
-  color: #444;    
-}
-.value {
-  color: #111;    
-}
-.res-q {
-  color: #444; 
-}
+  .score-card span {
+    color: #506650;
+    font-size: 0.82rem;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
 
+  .score-card strong {
+    color: #1b2a1b;
+    display: block;
+    font-size: 3rem;
+    line-height: 1;
+    margin: 0.35rem 0;
+  }
+
+  .score-card p {
+    color: #506650;
+    margin: 0;
+  }
+
+  .result-list {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .result-row {
+    align-items: start;
+    border-radius: 8px;
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+    padding: 1rem;
+  }
+
+  .result-row.correct {
+    background: rgba(102, 187, 106, 0.12);
+  }
+
+  .result-row.incorrect {
+    background: rgba(198, 40, 40, 0.08);
+  }
+
+  .result-row h3 {
+    color: #1b2a1b;
+    font-size: 1rem;
+    font-weight: 800;
+    margin: 0 0 0.5rem;
+  }
+
+  .result-row p {
+    color: #506650;
+    margin: 0.2rem 0;
+  }
+
+  .result-row > span {
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 800;
+    padding: 0.35rem 0.65rem;
+    text-transform: uppercase;
+  }
+
+  .correct > span {
+    background: #458051;
+    color: #fff;
+  }
+
+  .incorrect > span {
+    background: #c62828;
+    color: #fff;
+  }
+
+  .state-card {
+    color: #506650;
+    text-align: center;
+  }
+
+  @media (max-width: 640px) {
+    .run-hero,
+    .question-card,
+    .results-panel {
+      padding: 1.25rem;
+    }
+
+    .question-topline,
+    .question-actions,
+    .results-actions,
+    .result-row {
+      align-items: stretch;
+      flex-direction: column;
+    }
+  }
 </style>
