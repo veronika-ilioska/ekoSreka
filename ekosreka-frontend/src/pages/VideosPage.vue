@@ -1,104 +1,61 @@
 <template>
-  <section class="eco-section eco-videos">
-    <div class="container">
-      <header class="videos-header">
-        <h2 class="eco-section-title">Видеа</h2>
+  <section class="media-page">
+    <div class="media-shell">
+      <header class="media-hero videos-hero">
+        <div>
+          <p class="eyebrow">Eco videos</p>
+          <h1>Watch quick stories, guides, and ideas worth sharing</h1>
+          <p>Short clips and references for learning, inspiration, and practical eco action.</p>
+        </div>
+        <div class="hero-stat">
+          <strong>{{ totalItems }}</strong>
+          <span>videos</span>
+        </div>
+      </header>
 
-        <!-- Desktop filters -->
-        <div class="tools desktop-only">
-          <input
-            v-model="q"
-            @input="debouncedSearch"
-            type="search"
-            class="search"
-            placeholder="Пребарај по наслов..."
-          />
-          <select v-model.number="size" @change="goPage(0)" class="select">
+      <section class="media-toolbar">
+        <label class="search-field">
+          <span>Search videos</span>
+          <input v-model="q" @input="debouncedSearch" type="search" placeholder="Search by title..." />
+        </label>
+        <label class="select-field">
+          <span>Per page</span>
+          <select v-model.number="size" @change="goPage(0)">
             <option :value="8">8</option>
             <option :value="12">12</option>
             <option :value="24">24</option>
           </select>
-        </div>
+        </label>
+      </section>
 
-        <!-- Mobile toggle -->
-        <button
-          class="filters-toggle mobile-only"
-          @click="mobileFiltersOpen = !mobileFiltersOpen"
-          :aria-expanded="mobileFiltersOpen"
-        >
-          Филтри <span class="chev" :class="{ open: mobileFiltersOpen }">▾</span>
-        </button>
-      </header>
+      <div v-if="loading" class="state-card">Loading videos...</div>
+      <div v-else-if="loadError" class="alert alert-danger">{{ loadError }}</div>
+      <div v-else-if="items.length === 0" class="state-card">No videos found.</div>
 
-      <!-- Mobile filters panel -->
-      <transition name="slide">
-        <form
-          v-if="mobileFiltersOpen"
-          class="filters-panel mobile-only"
-          @submit.prevent="applyMobile"
-        >
-          <label class="fgroup">
-            <span>Пребарај</span>
-            <input v-model="q" type="search" class="search" placeholder="Пребарај по наслов..." />
-          </label>
-          <label class="fgroup">
-            <span>По страница</span>
-            <select v-model.number="size" class="select">
-              <option :value="8">8</option>
-              <option :value="12">12</option>
-              <option :value="24">24</option>
-            </select>
-          </label>
-          <div class="actions">
-            <button type="button" class="btn light" @click="resetMobile">Исчисти</button>
-            <button type="submit" class="btn primary">Примени</button>
-          </div>
-        </form>
-      </transition>
-
-      <div class="grid">
-        <!-- skeleton -->
-        <article
-          v-if="loading && items.length === 0"
-          v-for="i in size"
-          :key="'s' + i"
-          class="card skeleton"
-        >
-          <div class="thumb"></div>
-          <div class="body">
-            <div class="line w60"></div>
-            <div class="line w90"></div>
-          </div>
-        </article>
-
-        <!-- items -->
-        <article v-for="v in items" :key="v.id" class="card">
-          <div class="thumb-wrap">
-            <img :src="thumb(v)" :alt="v.title" class="thumb" loading="lazy" />
-            <span class="play">▶</span>
-          </div>
-          <div class="body">
-            <h3 class="title" :title="v.title">{{ v.title }}</h3>
-            <p class="desc">{{ truncate(v.description, 120) }}</p>
-            <div class="meta">
-              <span class="tag">{{ (v.source || '').toLowerCase() }}</span>
-              <span class="tag" v-if="v.durationSec">{{ fmtDur(v.durationSec) }}</span>
+      <div v-else class="video-grid">
+        <article v-for="video in items" :key="video.id" class="video-card">
+          <a :href="videoUrl(video)" target="_blank" rel="noreferrer">
+            <img :src="thumbnail(video)" :alt="video.title" loading="lazy" />
+            <span class="play-badge">Play</span>
+          </a>
+          <div class="video-body">
+            <div class="video-meta">
+              <span>{{ video.source || 'Video' }}</span>
+              <span v-if="video.durationSec">{{ formatDuration(video.durationSec) }}</span>
             </div>
+            <h2>{{ video.title || 'Untitled video' }}</h2>
+            <p>{{ truncate(video.description, 130) || 'A quick eco video from the collection.' }}</p>
           </div>
         </article>
-      </div>
-
-      <div v-if="!loading && items.length === 0" class="empty">
-        <p>Нема резултати за „{{ q }}“.</p>
       </div>
 
       <footer class="pager" v-if="totalPages > 1">
-        <button class="btn" :disabled="page === 0 || loading" @click="goPage(page - 1)">
-          « Претходна
+        <button class="btn btn-outline-success" :disabled="page === 0 || loading" @click="goPage(page - 1)">
+          Previous
         </button>
-        <span class="pageinfo">Страна {{ page + 1 }} од {{ totalPages }}</span>
-        <button class="btn" :disabled="page >= totalPages - 1 || loading" @click="goPage(page + 1)">
-          Следна »
+        <span>Page {{ page + 1 }} of {{ totalPages }}</span>
+        <button class="btn btn-outline-success" :disabled="page >= totalPages - 1 || loading" @click="goPage(page + 1)">
+          Next
         </button>
       </footer>
     </div>
@@ -106,321 +63,302 @@
 </template>
 
 <script setup>
-  import { reactive, ref, onMounted } from 'vue';
+  import { computed, onMounted, ref } from 'vue';
+  import { api } from '../api';
+  import fallbackImage from '../img/game.png';
 
-  const items = reactive([]);
+  const items = ref([]);
   const page = ref(0);
   const size = ref(12);
   const totalPages = ref(0);
+  const totalItems = ref(0);
   const q = ref('');
   const loading = ref(false);
-  const mobileFiltersOpen = ref(false);
+  const loadError = ref('');
+  let searchTimer = null;
+
+  const params = computed(() => {
+    const value = { page: page.value, size: size.value };
+    if (q.value.trim()) value.q = q.value.trim();
+    return value;
+  });
 
   async function load() {
     loading.value = true;
-    try {
-      const url = new URL('/api/media/videos', window.location.origin);
-      url.searchParams.set('page', page.value);
-      url.searchParams.set('size', size.value);
-      if (q.value.trim()) url.searchParams.set('q', q.value.trim());
+    loadError.value = '';
 
-      const res = await fetch(url, { headers: { Accept: 'application/json' } });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      const data = await res.json();
-      items.splice(0, items.length, ...(data.content ?? []));
-      totalPages.value = data.totalPages ?? 0;
-    } catch (e) {
-      console.error('Load videos error:', e);
-      items.splice(0, items.length);
+    try {
+      const { data } = await api.get('/media/videos', { params: params.value });
+      items.value = data?.content ?? [];
+      totalPages.value = data?.totalPages ?? 0;
+      totalItems.value = data?.totalElements ?? items.value.length;
+    } catch (error) {
+      loadError.value = 'Could not load videos.';
+      items.value = [];
       totalPages.value = 0;
+      totalItems.value = 0;
     } finally {
       loading.value = false;
     }
   }
 
-  function goPage(p) {
-    if (p < 0) p = 0;
-    page.value = p;
+  function goPage(nextPage) {
+    page.value = Math.max(0, nextPage);
     load();
   }
-  let t = null;
+
   function debouncedSearch() {
     page.value = 0;
-    clearTimeout(t);
-    t = setTimeout(load, 300);
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(load, 300);
   }
 
-  function truncate(s, n = 120) {
-    if (!s) return '';
-    return s.length > n ? s.slice(0, n - 1) + '…' : s;
-  }
-  function fmtDur(sec) {
-    const m = Math.floor(sec / 60),
-      s = sec % 60;
-    return `${m}m ${s}s`;
-  }
-  function thumb(v) {
-    if ((v.source || '').toUpperCase() === 'YOUTUBE' && v.ref)
-      return `https://img.youtube.com/vi/${v.ref}/hqdefault.jpg`;
-    return v.thumbnailUrl || 'https://placehold.co/600x400?text=Video';
+  function truncate(text, length = 120) {
+    if (!text) return '';
+    return text.length > length ? `${text.slice(0, length - 1)}...` : text;
   }
 
-  /* Mobile helpers */
-  function applyMobile() {
-    page.value = 0;
-    mobileFiltersOpen.value = false;
-    load();
+  function formatDuration(seconds) {
+    const minutes = Math.floor(seconds / 60);
+    const rest = seconds % 60;
+    return `${minutes}:${String(rest).padStart(2, '0')}`;
   }
-  function resetMobile() {
-    q.value = '';
-    size.value = 12;
-    applyMobile();
+
+  function youtubeId(video) {
+    if ((video.source || '').toUpperCase() === 'YOUTUBE' && video.ref) return video.ref;
+    return '';
+  }
+
+  function thumbnail(video) {
+    const id = youtubeId(video);
+    if (id) return `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
+    return video.thumbnailUrl || fallbackImage;
+  }
+
+  function videoUrl(video) {
+    const id = youtubeId(video);
+    if (id) return `https://www.youtube.com/watch?v=${id}`;
+    return video.ref || '#';
   }
 
   onMounted(load);
 </script>
 
 <style scoped>
-  .eco-section {
-    padding: clamp(24px, 3vw, 40px) 0;
+  .media-page {
+    color: var(--eco-text-dark);
+    padding: 1rem 0 4rem;
   }
-  .container {
-    max-width: 1120px;
+
+  .media-shell {
     margin: 0 auto;
-    padding: 0 16px;
+    max-width: 1120px;
   }
 
-  .videos-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 16px;
-  }
-  .tools {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-  }
-  .search,
-  .select {
-    padding: 10px 12px;
-    border-radius: 12px;
-    border: 1px solid #e5e7eb;
-    background: #fff;
-  }
-  .search:focus {
-    border-color: #60a5fa;
-    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.25);
-  }
-
-  .desktop-only {
-    display: flex;
-  }
-  .mobile-only {
-    display: none;
-  }
-
-  /* Mobile toggle */
-  .filters-toggle {
-    padding: 10px 14px;
-    border-radius: 10px;
-    border: 1px solid #e5e7eb;
-    background: #fff;
-  }
-  .filters-toggle .chev {
-    display: inline-block;
-    transition: transform 0.2s ease;
-    margin-left: 6px;
-  }
-  .filters-toggle .chev.open {
-    transform: rotate(180deg);
-  }
-
-  /* Mobile panel */
-  .filters-panel {
-    display: grid;
-    gap: 10px;
-    margin: 8px 0 14px;
-    padding: 12px;
-    border: 1px solid #e5e7eb;
-    border-radius: 14px;
-    background: #fafafa;
-  }
-  .fgroup {
-    display: grid;
-    gap: 6px;
-  }
-  .fgroup span {
-    font-size: 0.85rem;
-    color: #374151;
-  }
-  .actions {
-    display: flex;
-    gap: 10px;
-  }
-  .btn {
-    padding: 10px 14px;
-    border-radius: 10px;
-    border: 1px solid #e5e7eb;
-    background: #fff;
-  }
-  .btn.light {
-    background: #fff;
-  }
-  .btn.primary {
-    background: #2563eb;
+  .media-hero {
+    align-items: end;
+    border-radius: 8px;
     color: #fff;
-    border-color: #1d4ed8;
-  }
-
-  /* Transition */
-  .slide-enter-active,
-  .slide-leave-active {
-    transition:
-      max-height 0.2s ease,
-      opacity 0.2s ease;
-  }
-  .slide-enter-from,
-  .slide-leave-to {
-    max-height: 0;
-    opacity: 0;
-  }
-  .slide-enter-to,
-  .slide-leave-from {
-    max-height: 320px;
-    opacity: 1;
-  }
-
-  /* Grid & cards */
-  .grid {
     display: grid;
-    gap: 16px;
-    grid-template-columns: repeat(12, 1fr);
-  }
-  .card {
-    grid-column: span 12;
-    display: grid;
-    grid-template-rows: auto 1fr;
-    overflow: hidden;
-    border-radius: 16px;
-    background: #fff;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
-    transition:
-      transform 0.2s,
-      box-shadow 0.2s;
-  }
-  .card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.1);
-  }
-  @media (min-width: 640px) {
-    .card {
-      grid-column: span 6;
-    }
-  }
-  @media (min-width: 992px) {
-    .card {
-      grid-column: span 3;
-    }
+    gap: 1.5rem;
+    grid-template-columns: minmax(0, 1fr) 220px;
+    min-height: 300px;
+    padding: clamp(1.5rem, 4vw, 2.5rem);
   }
 
-  .thumb-wrap {
-    position: relative;
-    aspect-ratio: 16/9;
-    background: #111;
+  .videos-hero {
+    background:
+      linear-gradient(135deg, rgba(36, 77, 43, 0.94), rgba(69, 128, 81, 0.82)),
+      url('../img/game.png') center / cover;
   }
-  .thumb {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+
+  .eyebrow {
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    margin: 0 0 0.65rem;
+    text-transform: uppercase;
+  }
+
+  .media-hero h1 {
+    font-size: clamp(2rem, 5vw, 4rem);
+    font-weight: 800;
+    letter-spacing: 0;
+    line-height: 1.02;
+    margin: 0 0 1rem;
+    max-width: 780px;
+  }
+
+  .media-hero p {
+    font-size: 1.04rem;
+    line-height: 1.7;
+    margin: 0;
+    max-width: 620px;
+    opacity: 0.94;
+  }
+
+  .hero-stat {
+    background: rgba(255, 255, 255, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    padding: 1rem;
+  }
+
+  .hero-stat strong {
     display: block;
-    opacity: 0.9;
-  }
-  .play {
-    position: absolute;
-    inset: auto auto 8px 8px;
-    background: #ffffffdb;
-    color: #111;
-    border-radius: 999px;
-    padding: 6px 10px;
-    font-weight: 700;
+    font-size: 2.3rem;
+    line-height: 1;
   }
 
-  .body {
-    padding: 12px;
-    display: grid;
-    gap: 6px;
+  .hero-stat span {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 800;
+    margin-top: 0.35rem;
+    text-transform: uppercase;
   }
-  .title {
-    margin: 0;
-    font-size: 1rem;
-    font-weight: 700;
-  }
-  .desc {
-    margin: 0;
-    color: #4b5563;
-    font-size: 0.94rem;
-    min-height: 2.6em;
-  }
-  .meta {
+
+  .media-toolbar {
+    align-items: end;
     display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-    margin-top: 2px;
+    gap: 0.75rem;
+    justify-content: space-between;
+    margin: 1.25rem 0;
   }
-  .tag {
-    font-size: 0.75rem;
-    padding: 4px 8px;
+
+  .search-field,
+  .select-field {
+    display: grid;
+    gap: 0.35rem;
+  }
+
+  .search-field {
+    flex: 1;
+  }
+
+  .search-field span,
+  .select-field span {
+    color: #506650;
+    font-size: 0.82rem;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+
+  input,
+  select {
+    background: var(--eco-card-bg);
+    border: 1px solid rgba(69, 128, 81, 0.25);
+    border-radius: 8px;
+    min-height: 44px;
+    padding: 0.7rem 0.85rem;
+  }
+
+  .video-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .video-card {
+    background: var(--eco-card-bg);
+    border: 1px solid rgba(69, 128, 81, 0.14);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(27, 42, 27, 0.08);
+    overflow: hidden;
+  }
+
+  .video-card a {
+    display: block;
+    position: relative;
+  }
+
+  .video-card img {
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    width: 100%;
+  }
+
+  .play-badge {
+    background: rgba(255, 255, 255, 0.92);
     border-radius: 999px;
-    background: #eef2ff;
-    color: #3730a3;
+    bottom: 0.75rem;
+    color: #1b2a1b;
+    font-size: 0.78rem;
+    font-weight: 800;
+    left: 0.75rem;
+    padding: 0.35rem 0.65rem;
+    position: absolute;
+    text-transform: uppercase;
+  }
+
+  .video-body {
+    display: grid;
+    gap: 0.65rem;
+    padding: 1rem;
+  }
+
+  .video-meta {
+    color: #506650;
+    display: flex;
+    font-size: 0.8rem;
+    font-weight: 800;
+    justify-content: space-between;
+    text-transform: uppercase;
+  }
+
+  .video-body h2 {
+    color: #1b2a1b;
+    font-size: 1.15rem;
+    font-weight: 800;
+    letter-spacing: 0;
+    margin: 0;
+  }
+
+  .video-body p {
+    color: #506650;
+    line-height: 1.55;
+    margin: 0;
+  }
+
+  .state-card {
+    background: var(--eco-card-bg);
+    border: 1px solid rgba(69, 128, 81, 0.14);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(27, 42, 27, 0.08);
+    color: #506650;
+    padding: 1.5rem;
+    text-align: center;
   }
 
   .pager {
-    margin-top: 18px;
-    display: flex;
-    gap: 10px;
-    justify-content: center;
     align-items: center;
-  }
-  .btn {
-    padding: 10px 14px;
-    border-radius: 10px;
-    border: 1px solid #e5e7eb;
-    background: #fff;
-  }
-  .btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-  .pageinfo {
-    color: #6b7280;
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    margin-top: 1.5rem;
   }
 
-  .skeleton .thumb {
-    background: #e5e7eb;
-  }
-  .skeleton .line {
-    height: 10px;
-    background: #e5e7eb;
-    border-radius: 8px;
-    margin: 6px 0;
-  }
-  .skeleton .w60 {
-    width: 60%;
-  }
-  .skeleton .w90 {
-    width: 90%;
+  .pager span {
+    color: #506650;
+    font-weight: 800;
   }
 
-  /* Responsive switch */
-  @media (max-width: 768px) {
-    .desktop-only {
-      display: none;
+  @media (max-width: 991px) {
+    .media-hero,
+    .video-grid {
+      grid-template-columns: 1fr;
     }
-    .mobile-only {
-      display: block;
+
+    .hero-stat {
+      max-width: 240px;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .media-toolbar,
+    .pager {
+      align-items: stretch;
+      flex-direction: column;
     }
   }
 </style>
