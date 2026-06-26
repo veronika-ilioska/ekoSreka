@@ -55,7 +55,7 @@
           <RouterLink to="/quizzes" class="cta-tile cta-tile--quiz">
             <div class="cta-inner">
               <div class="cta-icon">
-                <img src="../img/quiz.png" alt="Quiz" class="cta-icon-img" />
+                <img src="../img/quiz.png" alt="Квиз" class="cta-icon-img" />
               </div>
               <h3 class="cta-title">Квизови</h3>
               <p class="cta-subtitle">Испробај го твоето еко знаење</p>
@@ -66,7 +66,7 @@
           <RouterLink to="/shop" class="cta-tile cta-tile--shop">
             <div class="cta-inner">
               <div class="cta-icon">
-                <img src="../img/bag.png" alt="Shop" class="cta-icon-img" />
+                <img src="../img/bag.png" alt="Продавница" class="cta-icon-img" />
               </div>
               <h3 class="cta-title">Онлајн продавница</h3>
               <p class="cta-subtitle">Еко производи за секој ден</p>
@@ -77,7 +77,7 @@
           <RouterLink to="/fun" class="cta-tile cta-tile--fun">
             <div class="cta-inner">
               <div class="cta-icon">
-                <img src="../img/game.png" alt="Fun" class="cta-icon-img" />
+                <img src="../img/game.png" alt="Забава" class="cta-icon-img" />
               </div>
               <h3 class="cta-title">Забава</h3>
               <p class="cta-subtitle">Позитивна еко содржина</p>
@@ -90,24 +90,24 @@
 
   <section class="eco-section">
     <div class="container">
-      <div
-        class="eco-card p-4 d-flex flex-column flex-lg-row align-items-center justify-content-between"
-      >
+      <div class="eco-card p-4 d-flex flex-column flex-lg-row align-items-center justify-content-between">
         <div>
           <h4 class="mb-1">Сакате соработка или имате приказна?</h4>
-          <p class="text-muted mb-0">Пишете ни — заедно правиме промена.</p>
+          <p class="text-muted mb-0">Пишете ни - заедно правиме промена.</p>
         </div>
         <a href="#contact" class="btn eco-btn mt-3 mt-lg-0 px-4">Контакт</a>
       </div>
     </div>
   </section>
 </template>
+
 <script setup>
   import { onMounted, ref } from 'vue';
   import { api } from '../api';
   import NewsCard from '../components/NewsCard.vue';
 
   const latest = ref([]);
+
   onMounted(async () => {
     const { data } = await api.get('/news', { params: { page: 0, size: 6 } });
     latest.value = data.content || [];
@@ -116,9 +116,8 @@
 
 <style scoped>
   .cta-icon-img {
-    width: 60px;
     height: 60px;
     object-fit: contain;
+    width: 60px;
   }
 </style>
-

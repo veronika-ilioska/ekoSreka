@@ -6,7 +6,7 @@
           <div class="eco-card auth-card p-5">
             <div class="text-center mb-4">
               <h2 class="eco-title mb-2">Пријави се</h2>
-              <p class="text-muted">Добро дошле назад на ЕкоСреќа! 🌿</p>
+              <p class="text-muted">Добродојде назад на ЕкоСреќа! 🌿</p>
             </div>
 
             <form @submit.prevent="handleLogin">

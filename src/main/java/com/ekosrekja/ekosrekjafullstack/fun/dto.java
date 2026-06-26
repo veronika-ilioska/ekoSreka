@@ -1,5 +1,6 @@
 package com.ekosrekja.ekosrekjafullstack.fun;
 
+import java.time.Instant;
 import java.time.LocalDate;
 
 public class dto {
@@ -10,7 +11,8 @@ public class dto {
             LocalDate periodDate,
             String title,
             String content,
-            String ecoTip) {}
+            String ecoTip,
+            Instant createdAt) {}
 
     public record CountDto(long count) {}
 }

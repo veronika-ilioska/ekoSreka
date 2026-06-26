@@ -4,13 +4,12 @@
       <header class="profile-hero">
         <div class="avatar" aria-hidden="true">{{ initials }}</div>
         <div class="hero-copy">
-          <p class="eyebrow">My profile</p>
+          <p class="eyebrow">Мој профил</p>
           <h1>{{ displayName }}</h1>
-          <p>{{ user?.email || 'Keep your account details up to date.' }}</p>
+          <p>{{ user?.email || 'Одржувај ги податоците на профилот ажурирани.' }}</p>
         </div>
         <button v-if="!isEditing" class="btn eco-btn edit-button" type="button" @click="startEditing">
-          <i class="bi bi-pencil-square me-2"></i>
-          Edit
+          Уреди
         </button>
       </header>
 
@@ -20,111 +19,87 @@
       <div class="profile-grid">
         <article class="profile-panel">
           <div class="panel-heading">
-            <h2>Account Details</h2>
-            <p>These details identify your account across EkoSrekja.</p>
+            <h2>Детали за профилот</h2>
+            <p>Овие податоци го идентификуваат твојот профил на ЕкоСреќа.</p>
           </div>
 
           <div v-if="!isEditing" class="details-list">
             <div class="detail-row">
-              <span>First name</span>
-              <strong>{{ user?.firstName || 'Not set' }}</strong>
+              <span>Име</span>
+              <strong>{{ user?.firstName || 'Не е поставено' }}</strong>
             </div>
             <div class="detail-row">
-              <span>Last name</span>
-              <strong>{{ user?.lastName || 'Not set' }}</strong>
+              <span>Презиме</span>
+              <strong>{{ user?.lastName || 'Не е поставено' }}</strong>
             </div>
             <div class="detail-row">
-              <span>Username</span>
+              <span>Корисничко име</span>
               <strong>{{ user?.username }}</strong>
             </div>
             <div class="detail-row">
-              <span>Email</span>
+              <span>Е-пошта</span>
               <strong>{{ user?.email }}</strong>
             </div>
             <div class="detail-row">
-              <span>Member since</span>
+              <span>Член од</span>
               <strong>{{ memberSince }}</strong>
             </div>
           </div>
 
           <form v-else class="profile-form" @submit.prevent="saveProfile">
             <div class="form-field">
-              <label for="firstName">First name</label>
+              <label for="firstName">Име</label>
               <input id="firstName" v-model.trim="form.firstName" type="text" class="form-control" />
             </div>
             <div class="form-field">
-              <label for="lastName">Last name</label>
+              <label for="lastName">Презиме</label>
               <input id="lastName" v-model.trim="form.lastName" type="text" class="form-control" />
             </div>
             <div class="form-field">
-              <label for="email">Email</label>
-              <input
-                id="email"
-                v-model.trim="form.email"
-                type="email"
-                class="form-control"
-                required
-              />
+              <label for="email">Е-пошта</label>
+              <input id="email" v-model.trim="form.email" type="email" class="form-control" required />
             </div>
             <div class="form-field">
-              <label for="username">Username</label>
+              <label for="username">Корисничко име</label>
               <input id="username" :value="user?.username" type="text" class="form-control" disabled />
-              <small>Username cannot be changed.</small>
+              <small>Корисничкото име не може да се промени.</small>
             </div>
 
             <div v-if="formError" class="alert alert-danger">{{ formError }}</div>
 
             <div class="form-actions">
               <button class="btn eco-btn" type="submit" :disabled="isSaving">
-                {{ isSaving ? 'Saving...' : 'Save changes' }}
+                {{ isSaving ? 'Се зачувува...' : 'Зачувај промени' }}
               </button>
               <button class="btn btn-outline-secondary" type="button" @click="cancelEditing">
-                Cancel
+                Откажи
               </button>
             </div>
           </form>
         </article>
 
         <aside class="profile-panel side-panel">
-          <h2>Security</h2>
-          <p class="side-copy">Change your password after confirming the current one.</p>
+          <h2>Безбедност</h2>
+          <p class="side-copy">Промени ја лозинката откако ќе ја потврдиш тековната.</p>
 
           <form class="password-form" @submit.prevent="changePassword">
             <div class="form-field">
-              <label for="currentPassword">Current password</label>
-              <input
-                id="currentPassword"
-                v-model="passwordForm.currentPassword"
-                type="password"
-                class="form-control"
-                autocomplete="current-password"
-              />
+              <label for="currentPassword">Тековна лозинка</label>
+              <input id="currentPassword" v-model="passwordForm.currentPassword" type="password" class="form-control" autocomplete="current-password" />
             </div>
             <div class="form-field">
-              <label for="newPassword">New password</label>
-              <input
-                id="newPassword"
-                v-model="passwordForm.newPassword"
-                type="password"
-                class="form-control"
-                autocomplete="new-password"
-              />
+              <label for="newPassword">Нова лозинка</label>
+              <input id="newPassword" v-model="passwordForm.newPassword" type="password" class="form-control" autocomplete="new-password" />
             </div>
             <div class="form-field">
-              <label for="confirmPassword">Confirm password</label>
-              <input
-                id="confirmPassword"
-                v-model="passwordForm.confirmPassword"
-                type="password"
-                class="form-control"
-                autocomplete="new-password"
-              />
+              <label for="confirmPassword">Потврди лозинка</label>
+              <input id="confirmPassword" v-model="passwordForm.confirmPassword" type="password" class="form-control" autocomplete="new-password" />
             </div>
 
             <div v-if="passwordError" class="alert alert-danger">{{ passwordError }}</div>
 
             <button class="btn btn-outline-success w-100" type="submit" :disabled="isChangingPassword">
-              {{ isChangingPassword ? 'Updating...' : 'Update password' }}
+              {{ isChangingPassword ? 'Се ажурира...' : 'Ажурирај лозинка' }}
             </button>
           </form>
         </aside>
@@ -141,7 +116,6 @@
 
   const router = useRouter();
   const authStore = useAuthStore();
-
   const user = computed(() => authStore.user);
   const isEditing = ref(false);
   const isSaving = ref(false);
@@ -150,40 +124,27 @@
   const formError = ref('');
   const passwordError = ref('');
   const successMessage = ref('');
-
-  const form = reactive({
-    firstName: '',
-    lastName: '',
-    email: '',
-  });
-
-  const passwordForm = reactive({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
-  });
+  const form = reactive({ firstName: '', lastName: '', email: '' });
+  const passwordForm = reactive({ currentPassword: '', newPassword: '', confirmPassword: '' });
 
   const displayName = computed(() => {
-    const firstName = user.value?.firstName?.trim();
-    const lastName = user.value?.lastName?.trim();
-    const fullName = [firstName, lastName].filter(Boolean).join(' ');
-    return fullName || user.value?.username || 'Your profile';
+    const fullName = [user.value?.firstName?.trim(), user.value?.lastName?.trim()].filter(Boolean).join(' ');
+    return fullName || user.value?.username || 'Твој профил';
   });
 
-  const initials = computed(() => {
-    const source = displayName.value || user.value?.email || 'User';
-    return source
+  const initials = computed(() =>
+    (displayName.value || user.value?.email || 'Корисник')
       .split(/\s+/)
       .filter(Boolean)
       .slice(0, 2)
       .map((part) => part[0])
       .join('')
-      .toUpperCase();
-  });
+      .toUpperCase()
+  );
 
   const memberSince = computed(() => {
-    if (!user.value?.createdAt) return 'Unknown';
-    return new Date(Number(user.value.createdAt)).toLocaleDateString(undefined, {
+    if (!user.value?.createdAt) return 'Непознато';
+    return new Date(Number(user.value.createdAt)).toLocaleDateString('mk-MK', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -206,13 +167,12 @@
 
   async function loadProfile() {
     if (!requireLogin()) return;
-
     try {
       const { data } = await api.get(`/profile/${authStore.userId}`);
       authStore.updateUser(data);
       fillForm();
     } catch (error) {
-      pageError.value = error.response?.data?.message || 'Could not load your profile.';
+      pageError.value = error.response?.data?.message || 'Профилот не може да се вчита.';
     }
   }
 
@@ -233,9 +193,8 @@
     if (!requireLogin()) return;
     formError.value = '';
     successMessage.value = '';
-
     if (!form.email) {
-      formError.value = 'Email is required.';
+      formError.value = 'Е-поштата е задолжителна.';
       return;
     }
 
@@ -246,12 +205,11 @@
         lastName: form.lastName,
         email: form.email,
       });
-
       authStore.updateUser(data);
       isEditing.value = false;
-      successMessage.value = 'Profile updated successfully.';
+      successMessage.value = 'Профилот е успешно ажуриран.';
     } catch (error) {
-      formError.value = error.response?.data?.message || 'Could not update your profile.';
+      formError.value = error.response?.data?.message || 'Профилот не може да се ажурира.';
     } finally {
       isSaving.value = false;
     }
@@ -261,19 +219,16 @@
     if (!requireLogin()) return;
     passwordError.value = '';
     successMessage.value = '';
-
     if (!passwordForm.currentPassword || !passwordForm.newPassword) {
-      passwordError.value = 'Current and new password are required.';
+      passwordError.value = 'Тековната и новата лозинка се задолжителни.';
       return;
     }
-
     if (passwordForm.newPassword.length < 6) {
-      passwordError.value = 'New password must be at least 6 characters.';
+      passwordError.value = 'Новата лозинка мора да има најмалку 6 карактери.';
       return;
     }
-
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      passwordError.value = 'New passwords do not match.';
+      passwordError.value = 'Новите лозинки не се совпаѓаат.';
       return;
     }
 
@@ -283,13 +238,12 @@
         currentPassword: passwordForm.currentPassword,
         newPassword: passwordForm.newPassword,
       });
-
       passwordForm.currentPassword = '';
       passwordForm.newPassword = '';
       passwordForm.confirmPassword = '';
-      successMessage.value = 'Password updated successfully.';
+      successMessage.value = 'Лозинката е успешно ажурирана.';
     } catch (error) {
-      passwordError.value = error.response?.data || 'Could not update your password.';
+      passwordError.value = error.response?.data || 'Лозинката не може да се ажурира.';
     } finally {
       isChangingPassword.value = false;
     }
@@ -305,8 +259,8 @@
   }
 
   .profile-shell {
-    max-width: 1120px;
     margin: 0 auto;
+    max-width: 1120px;
   }
 
   .profile-hero {
@@ -334,29 +288,6 @@
     width: 96px;
   }
 
-  .hero-copy h1 {
-    font-size: 2rem;
-    font-weight: 800;
-    letter-spacing: 0;
-    margin: 0 0 0.35rem;
-  }
-
-  .hero-copy p {
-    margin: 0;
-    opacity: 0.9;
-  }
-
-  .eyebrow {
-    font-size: 0.78rem;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  .edit-button {
-    min-width: 112px;
-  }
-
   .profile-grid {
     display: grid;
     gap: 1.5rem;
@@ -371,49 +302,11 @@
     padding: 1.5rem;
   }
 
-  .panel-heading,
-  .side-panel > h2 {
-    margin-bottom: 1.5rem;
-  }
-
-  .profile-panel h2 {
-    color: #1f3b1f;
-    font-size: 1.3rem;
-    font-weight: 800;
-    letter-spacing: 0;
-    margin: 0 0 0.35rem;
-  }
-
-  .panel-heading p,
-  .side-copy {
-    color: #506650;
-    margin: 0;
-  }
-
-  .details-list {
-    border-top: 1px solid rgba(69, 128, 81, 0.15);
-  }
-
   .detail-row {
-    align-items: center;
     border-bottom: 1px solid rgba(69, 128, 81, 0.15);
     display: flex;
-    gap: 1rem;
     justify-content: space-between;
     padding: 1rem 0;
-  }
-
-  .detail-row span,
-  .form-field label {
-    color: #506650;
-    font-size: 0.88rem;
-    font-weight: 700;
-  }
-
-  .detail-row strong {
-    color: #1b2a1b;
-    overflow-wrap: anywhere;
-    text-align: right;
   }
 
   .profile-form,
@@ -427,69 +320,15 @@
     gap: 0.45rem;
   }
 
-  .form-control {
-    border: 1px solid rgba(69, 128, 81, 0.28);
-    border-radius: 8px;
-    min-height: 44px;
-  }
-
-  .form-control:focus {
-    border-color: #458051;
-    box-shadow: 0 0 0 0.2rem rgba(102, 187, 106, 0.2);
-  }
-
-  .form-field small {
-    color: #687868;
-  }
-
   .form-actions {
     display: flex;
     gap: 0.75rem;
-    margin-top: 0.5rem;
-  }
-
-  .alert {
-    border-radius: 8px;
   }
 
   @media (max-width: 991px) {
-    .profile-grid {
-      grid-template-columns: 1fr;
-    }
-
-    .profile-hero {
-      grid-template-columns: auto 1fr;
-    }
-
-    .edit-button {
-      grid-column: 1 / -1;
-      justify-self: start;
-    }
-  }
-
-  @media (max-width: 576px) {
+    .profile-grid,
     .profile-hero {
       grid-template-columns: 1fr;
-      padding: 1.5rem;
-      text-align: center;
-    }
-
-    .avatar {
-      justify-self: center;
-    }
-
-    .edit-button {
-      justify-self: stretch;
-    }
-
-    .detail-row,
-    .form-actions {
-      align-items: stretch;
-      flex-direction: column;
-    }
-
-    .detail-row strong {
-      text-align: left;
     }
   }
 </style>

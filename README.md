@@ -1,215 +1,189 @@
-# EkoSrekja Full Stack Application 🌍
+# ЕкоСреќа Fullstack
 
-A beautiful, earth-themed full-stack application with complete user authentication system featuring Vue 3 frontend and Spring Boot backend.
+ЕкоСреќа е full-stack еко апликација со Spring Boot backend, PostgreSQL база и Vue 3 frontend. Апликацијата има вести, квизови, профил, поставки, забавна секција, продавница и admin UI за додавање/бришење содржина.
 
-
-## 🚀 Quick Start
-
-### Prerequisites
-- Java 17+
-- Node.js 16+ (with npm)
-- PostgreSQL 12+
-- Git
-
-### Start in 3 Steps
-
-#### 1. Backend (Terminal 1)
-```bash
-cd ekosrekja-backend
-./gradlew bootRun
-```
-✅ Backend runs on: `http://localhost:8082`
-
-#### 2. Frontend (Terminal 2)
-```bash
-cd ekosreka-frontend
-npm install
-npm run dev
-```
-✅ Frontend runs on: `http://localhost:5173`
-
-#### 3. Open Browser
-Navigate to: `http://localhost:5173`
-
----
-
-## ✨ Features
-
-### Authentication System
-- 👤 **User Registration** - Create account with email validation
-- 🔐 **Secure Login** - BCrypt password hashing
-- 📝 **Form Validation** - Client-side and server-side
-- 💾 **Session Persistence** - Remember user across refreshes
-- 🌍 **Earth-Themed UI** - Beautiful, modern design
-
-### User Management
-- Unique usernames and emails
-- First name and last name fields
-- Automatic timestamp tracking
-- User profile retrieval
-
-### Security
-- Password encryption with BCrypt
-- SQL injection prevention
-- CORS configuration
-- Input validation
-- Error handling
-
-### UI/UX
-- 🎨 Responsive design (mobile-friendly)
-- 📱 Touch-optimized forms
-- ✨ Smooth animations
-- 🌱 Eco-friendly visual theme
-- 🔄 Real-time validation feedback
-- ⏳ Loading states
-
----
-
-## 🏗️ Architecture
-
-### Technology Stack
+## Stack
 
 **Backend**
+- Java 17
 - Spring Boot 3.5.6
 - Spring Security
 - Spring Data JPA
 - PostgreSQL
-- Gradle
-- Lombok
+- Flyway migrations
+- Maven
 
 **Frontend**
-- Vue 3 (Composition API)
+- Vue 3
 - Vite
+- Pinia
+- Axios
 - Bootstrap 5
-- Pinia (State Management)
-- Axios (HTTP Client)
-- Prettier (Code Formatter)
 
----
+## Project Structure
 
-## 💻 Installation
-
-### 1. Clone Repository
-```bash
-git clone veronika-ils/ekoSreka.git
-cd ekosrekja-fullstack
+```text
+.
+├── src/                         # Spring Boot backend
+├── src/main/resources/db/migration
+│   ├── V2__create_admins_and_seed_admin.sql
+│   └── V3__delete_existing_news.sql
+├── ekosreka-frontend/           # Main Vue frontend
+├── client/                      # Older/duplicate frontend copy
+├── pom.xml
+├── mvnw.cmd
+└── .env                         # Local-only values, ignored by git
 ```
 
-### 2. Backend Setup
-```bash
-cd ekosrekja-backend
+Use `ekosreka-frontend` for frontend work.
 
-# Build
-./gradlew build -x test
+## Prerequisites
 
-# Or run directly
-./gradlew bootRun
+- Java 17+
+- Node.js 18+ with npm
+- PostgreSQL 12+
+- Maven wrapper from this repo
+
+## Local Database
+
+Create the local database:
+
+```powershell
+psql -h localhost -p 5432 -U postgres -c "CREATE DATABASE ""EkoSrekja"";"
 ```
 
-### 3. Frontend Setup
-```bash
+Default connection values:
+
+```text
+Host: localhost
+Port: 5432
+Database: EkoSrekja
+Username: postgres
+Password: postgre
+```
+
+The backend currently reads these values from:
+
+```text
+src/main/resources/application.properties
+```
+
+The root `.env` is ignored by git and keeps the same local values in one place.
+
+## Run Backend
+
+From the repository root:
+
+```powershell
+.\mvnw.cmd spring-boot:run
+```
+
+Backend URL:
+
+```text
+http://localhost:8082
+```
+
+API base URL:
+
+```text
+http://localhost:8082/api
+```
+
+## Run Frontend
+
+In a second terminal:
+
+```powershell
 cd ekosreka-frontend
-
-# Install dependencies
 npm install
-
-# Start dev server
 npm run dev
 ```
 
-### 4. Database Setup
-```bash
-# Create database (if not exists)
-psql -U postgres -c "CREATE DATABASE EkoSrekja;"
+Frontend URL:
 
-# Verify connection in application.properties
-# spring.datasource.url=jdbc:postgresql://localhost:5432/EkoSrekja
-```
-
----
-
-
-## 📊 Performance Metrics
-
-| Operation | Time | Notes |
-|-----------|------|-------|
-| Signup | 100-200ms | Includes password hashing |
-| Login | 100-150ms | Database lookup + comparison |
-| Get User | <10ms | Direct database query |
-| Frontend Load | <1s | Initial page load |
-| Form Validation | Instant | Client-side |
-
----
-
-## 🎨 UI Features
-
-### Design Elements
-- 🌱 Floating leaf animations
-- 🍃 Earth-tone color palette (greens)
-- ✨ Smooth transitions and effects
-- 📱 Mobile-responsive layout
-- ♿ Accessible form controls
-
-### Components
-- Custom form validation
-- Loading spinners
-- Error messages
-- Success feedback
-- Navigation links
-
----
-
-## 🚀 Deployment
-
-### Backend Deployment
-```bash
-# Build JAR
-./gradlew build
-
-# JAR location
-build/libs/ekosrekja-0.0.1-SNAPSHOT.jar
-
-# Run
-java -jar build/libs/ekosrekja-0.0.1-SNAPSHOT.jar
-```
-
-### Frontend Deployment
-```bash
-# Build static files
-npm run build
-
-# Output in
-dist/
-
-# Serve with nginx or similar web server
-```
-
----
-
-## 🤝 Contributing
-
-To contribute:
-1. Create a feature branch
-2. Make changes
-3. Format code (`gradlew spotlessApply` / `npm run format`)
-4. Test thoroughly
-5. Submit pull request
-
----
-
-## 🎉 Ready to Go!
-
-Your full-stack authentication system is ready for use!
-
-**Start now:**
-```bash
-# Terminal 1
-cd ekosrekja-backend && ./gradlew bootRun
-
-# Terminal 2
-cd ekosreka-frontend && npm run dev
-
-# Browser
+```text
 http://localhost:5173
 ```
 
+## Build
+
+Backend:
+
+```powershell
+.\mvnw.cmd test
+.\mvnw.cmd package
+```
+
+Frontend:
+
+```powershell
+cd ekosreka-frontend
+npm run build
+```
+
+## Admin Test User
+
+The admin table and test admin are created through Flyway migration:
+
+```text
+src/main/resources/db/migration/V2__create_admins_and_seed_admin.sql
+```
+
+Test admin:
+
+```text
+Username: admin_test
+Password: Admin123!
+Email: admin@test.local
+```
+
+After logging in, open:
+
+```text
+http://localhost:5173/admin
+```
+
+Admins can add/delete:
+- news
+- quizzes
+- photos
+- videos
+- games
+- horoscope entries
+
+## Database Migrations
+
+Flyway runs on backend startup.
+
+Current migrations:
+- `V2__create_admins_and_seed_admin.sql` creates the `admins` table and inserts the test admin.
+- `V3__delete_existing_news.sql` removes existing news records so the news page starts empty.
+
+## News Categories
+
+News categories are in Macedonian:
+
+```text
+Рециклирање
+Енергија
+Природа
+Клима
+```
+
+The public news page filters by these values, and the admin news form uses the same category list.
+
+## Useful URLs
+
+```text
+Frontend: http://localhost:5173
+Backend:  http://localhost:8082
+API:      http://localhost:8082/api
+Admin:    http://localhost:5173/admin
+```
+
+## Notes
+
+- `.env` and `.env.*` are ignored by git.
+- `target/`, `node_modules/`, and frontend `dist/` should not be committed.
+- The site UI is currently in Macedonian.

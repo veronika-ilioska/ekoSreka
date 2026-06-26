@@ -7,7 +7,7 @@
           <h5 class="mb-3">Контакт</h5>
           <p class="mb-1">ЕкоСреќа • Скопје, Македонија</p>
           <p class="mb-1 nounder">
-            Email: <a href="mailto:ekosrekja@gmail.com" class="nounder">ekosrekja@gmail.com</a>
+            Е-пошта: <a href="mailto:ekosrekja@gmail.com" class="nounder">ekosrekja@gmail.com</a>
           </p>
           <p class="mb-0 nounder">
             Телефон: <a href="tel:+38970123456" class="nounder">+389 70 123 456</a>

@@ -21,6 +21,7 @@ export default createRouter({
       name: 'photos',
       component: () => import('./pages/PhotosPage.vue'), // прилагоди патека
     },
+    { path: '/photos/:id', component: () => import('./pages/PhotoDetails.vue') },
     { path: '/videos', component: () => import('./pages/VideosPage.vue') },
     { path: '/games', component: () => import('./pages/GamesPage.vue') },
     { path: '/horoscope', component: () => import('./pages/HoroscopePage.vue') },

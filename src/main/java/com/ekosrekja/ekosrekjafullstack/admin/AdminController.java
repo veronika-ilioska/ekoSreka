@@ -230,7 +230,7 @@ public class AdminController {
             @RequestParam(defaultValue = "10") int size) {
         requireAdmin(userId);
         return horoscopeRepository.findAll(
-                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "periodDate")));
+                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
     }
 
     @PostMapping("/horoscope")

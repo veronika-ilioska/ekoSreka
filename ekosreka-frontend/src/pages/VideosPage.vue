@@ -1,426 +1,164 @@
 <template>
-  <section class="eco-section eco-videos">
+  <section class="eco-section media-page">
     <div class="container">
-      <header class="videos-header">
-        <h2 class="eco-section-title">Видеа</h2>
-
-        <!-- Desktop filters -->
-        <div class="tools desktop-only">
-          <input
-            v-model="q"
-            @input="debouncedSearch"
-            type="search"
-            class="search"
-            placeholder="Пребарај по наслов..."
-          />
-          <select v-model.number="size" @change="goPage(0)" class="select">
-            <option :value="8">8</option>
-            <option :value="12">12</option>
-            <option :value="24">24</option>
-          </select>
+      <header class="media-hero">
+        <div>
+          <p class="eyebrow">Еко видеа</p>
+          <h1>Видеа</h1>
+          <p>Гледај ги сите видеа додадени во забавната секција.</p>
         </div>
-
-        <!-- Mobile toggle -->
-        <button
-          class="filters-toggle mobile-only"
-          @click="mobileFiltersOpen = !mobileFiltersOpen"
-          :aria-expanded="mobileFiltersOpen"
-        >
-          Филтри <span class="chev" :class="{ open: mobileFiltersOpen }">▾</span>
-        </button>
+        <div class="hero-count">
+          <strong>{{ totalItems }}</strong>
+          <span>објави</span>
+        </div>
       </header>
 
-      <!-- Mobile filters panel -->
-      <transition name="slide">
-        <form
-          v-if="mobileFiltersOpen"
-          class="filters-panel mobile-only"
-          @submit.prevent="applyMobile"
-        >
-          <label class="fgroup">
-            <span>Пребарај</span>
-            <input v-model="q" type="search" class="search" placeholder="Пребарај по наслов..." />
-          </label>
-          <label class="fgroup">
-            <span>По страница</span>
-            <select v-model.number="size" class="select">
-              <option :value="8">8</option>
-              <option :value="12">12</option>
-              <option :value="24">24</option>
-            </select>
-          </label>
-          <div class="actions">
-            <button type="button" class="btn light" @click="resetMobile">Исчисти</button>
-            <button type="submit" class="btn primary">Примени</button>
-          </div>
-        </form>
-      </transition>
+      <div class="toolbar">
+        <input v-model="q" @input="debouncedSearch" type="search" class="control" placeholder="Пребарај по наслов..." />
+        <select v-model.number="size" @change="goPage(0)" class="control">
+          <option :value="8">8</option>
+          <option :value="12">12</option>
+          <option :value="24">24</option>
+        </select>
+      </div>
 
-      <div class="grid">
-        <!-- skeleton -->
-        <article
-          v-if="loading && items.length === 0"
-          v-for="i in size"
-          :key="'s' + i"
-          class="card skeleton"
-        >
+      <div v-if="loading && items.length === 0" class="grid">
+        <article v-for="i in size" :key="i" class="card skeleton">
           <div class="thumb"></div>
-          <div class="body">
-            <div class="line w60"></div>
-            <div class="line w90"></div>
-          </div>
+          <div class="line w60"></div>
+          <div class="line w90"></div>
         </article>
+      </div>
 
-        <!-- items -->
-        <article v-for="v in items" :key="v.id" class="card">
-          <div class="thumb-wrap">
-            <img :src="thumb(v)" :alt="v.title" class="thumb" loading="lazy" />
+      <div v-else-if="items.length" class="grid">
+        <article v-for="video in items" :key="video.id" class="card">
+          <div class="thumb-wrap thumb-wrap--video">
+            <img :src="thumbnail(video)" :alt="video.title" class="thumb" loading="lazy" />
             <span class="play">▶</span>
           </div>
-          <div class="body">
-            <h3 class="title" :title="v.title">{{ v.title }}</h3>
-            <p class="desc">{{ truncate(v.description, 120) }}</p>
-            <div class="meta">
-              <span class="tag">{{ (v.source || '').toLowerCase() }}</span>
-              <span class="tag" v-if="v.durationSec">{{ fmtDur(v.durationSec) }}</span>
-            </div>
+          <div class="meta-top">
+            <span class="chip">{{ sourceLabel(video.source) }}</span>
+            <span v-if="video.durationSec" class="chip chip-date">{{ formatDuration(video.durationSec) }}</span>
           </div>
+          <h2 class="title">{{ video.title }}</h2>
+          <p class="content">{{ truncate(video.description, 130) }}</p>
         </article>
       </div>
 
-      <div v-if="!loading && items.length === 0" class="empty">
-        <p>Нема резултати за „{{ q }}“.</p>
-      </div>
+      <article v-else class="card empty">
+        <p>Нема додадени видеа.</p>
+      </article>
 
       <footer class="pager" v-if="totalPages > 1">
-        <button class="btn" :disabled="page === 0 || loading" @click="goPage(page - 1)">
-          « Претходна
-        </button>
-        <span class="pageinfo">Страна {{ page + 1 }} од {{ totalPages }}</span>
-        <button class="btn" :disabled="page >= totalPages - 1 || loading" @click="goPage(page + 1)">
-          Следна »
-        </button>
+        <button class="btn" :disabled="page === 0 || loading" @click="goPage(page - 1)">Претходна</button>
+        <span>Страна {{ page + 1 }} од {{ totalPages }}</span>
+        <button class="btn" :disabled="page >= totalPages - 1 || loading" @click="goPage(page + 1)">Следна</button>
       </footer>
     </div>
   </section>
 </template>
 
 <script setup>
-  import { reactive, ref, onMounted } from 'vue';
+  import { onMounted, ref } from 'vue';
+  import { api } from '../api';
 
-  const items = reactive([]);
+  const items = ref([]);
   const page = ref(0);
   const size = ref(12);
   const totalPages = ref(0);
+  const totalItems = ref(0);
   const q = ref('');
   const loading = ref(false);
-  const mobileFiltersOpen = ref(false);
 
   async function load() {
     loading.value = true;
     try {
-      const url = new URL('/api/media/videos', window.location.origin);
-      url.searchParams.set('page', page.value);
-      url.searchParams.set('size', size.value);
-      if (q.value.trim()) url.searchParams.set('q', q.value.trim());
-
-      const res = await fetch(url, { headers: { Accept: 'application/json' } });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      const data = await res.json();
-      items.splice(0, items.length, ...(data.content ?? []));
+      const { data } = await api.get('/media/videos', {
+        params: { page: page.value, size: size.value, q: q.value.trim() },
+      });
+      items.value = data.content ?? [];
       totalPages.value = data.totalPages ?? 0;
-    } catch (e) {
-      console.error('Load videos error:', e);
-      items.splice(0, items.length);
+      totalItems.value = data.totalElements ?? items.value.length;
+    } catch (error) {
+      console.error('Грешка при вчитување видеа:', error);
+      items.value = [];
       totalPages.value = 0;
+      totalItems.value = 0;
     } finally {
       loading.value = false;
     }
   }
 
-  function goPage(p) {
-    if (p < 0) p = 0;
-    page.value = p;
+  function goPage(nextPage) {
+    page.value = Math.max(0, nextPage);
     load();
   }
-  let t = null;
+
+  let timer = null;
   function debouncedSearch() {
     page.value = 0;
-    clearTimeout(t);
-    t = setTimeout(load, 300);
+    clearTimeout(timer);
+    timer = setTimeout(load, 300);
   }
 
-  function truncate(s, n = 120) {
-    if (!s) return '';
-    return s.length > n ? s.slice(0, n - 1) + '…' : s;
-  }
-  function fmtDur(sec) {
-    const m = Math.floor(sec / 60),
-      s = sec % 60;
-    return `${m}m ${s}s`;
-  }
-  function thumb(v) {
-    if ((v.source || '').toUpperCase() === 'YOUTUBE' && v.ref)
-      return `https://img.youtube.com/vi/${v.ref}/hqdefault.jpg`;
-    return v.thumbnailUrl || 'https://placehold.co/600x400?text=Video';
+  function truncate(value, length = 120) {
+    if (!value) return '';
+    return value.length > length ? `${value.slice(0, length - 1)}...` : value;
   }
 
-  /* Mobile helpers */
-  function applyMobile() {
-    page.value = 0;
-    mobileFiltersOpen.value = false;
-    load();
+  function formatDuration(seconds) {
+    const minutes = Math.floor(seconds / 60);
+    const rest = seconds % 60;
+    return `${minutes}м ${rest}с`;
   }
-  function resetMobile() {
-    q.value = '';
-    size.value = 12;
-    applyMobile();
+
+  function sourceLabel(source) {
+    return source ? String(source).toLowerCase() : 'видео';
+  }
+
+  function thumbnail(video) {
+    if ((video.source || '').toUpperCase() === 'YOUTUBE' && video.ref) {
+      return `https://img.youtube.com/vi/${video.ref}/hqdefault.jpg`;
+    }
+    return video.thumbnailUrl || 'https://placehold.co/600x400?text=Video';
   }
 
   onMounted(load);
 </script>
 
 <style scoped>
-  .eco-section {
-    padding: clamp(24px, 3vw, 40px) 0;
-  }
-  .container {
-    max-width: 1120px;
-    margin: 0 auto;
-    padding: 0 16px;
-  }
-
-  .videos-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 16px;
-  }
-  .tools {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-  }
-  .search,
-  .select {
-    padding: 10px 12px;
-    border-radius: 12px;
-    border: 1px solid #e5e7eb;
-    background: #fff;
-  }
-  .search:focus {
-    border-color: #60a5fa;
-    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.25);
-  }
-
-  .desktop-only {
-    display: flex;
-  }
-  .mobile-only {
-    display: none;
-  }
-
-  /* Mobile toggle */
-  .filters-toggle {
-    padding: 10px 14px;
-    border-radius: 10px;
-    border: 1px solid #e5e7eb;
-    background: #fff;
-  }
-  .filters-toggle .chev {
-    display: inline-block;
-    transition: transform 0.2s ease;
-    margin-left: 6px;
-  }
-  .filters-toggle .chev.open {
-    transform: rotate(180deg);
-  }
-
-  /* Mobile panel */
-  .filters-panel {
-    display: grid;
-    gap: 10px;
-    margin: 8px 0 14px;
-    padding: 12px;
-    border: 1px solid #e5e7eb;
-    border-radius: 14px;
-    background: #fafafa;
-  }
-  .fgroup {
-    display: grid;
-    gap: 6px;
-  }
-  .fgroup span {
-    font-size: 0.85rem;
-    color: #374151;
-  }
-  .actions {
-    display: flex;
-    gap: 10px;
-  }
-  .btn {
-    padding: 10px 14px;
-    border-radius: 10px;
-    border: 1px solid #e5e7eb;
-    background: #fff;
-  }
-  .btn.light {
-    background: #fff;
-  }
-  .btn.primary {
-    background: #2563eb;
-    color: #fff;
-    border-color: #1d4ed8;
-  }
-
-  /* Transition */
-  .slide-enter-active,
-  .slide-leave-active {
-    transition:
-      max-height 0.2s ease,
-      opacity 0.2s ease;
-  }
-  .slide-enter-from,
-  .slide-leave-to {
-    max-height: 0;
-    opacity: 0;
-  }
-  .slide-enter-to,
-  .slide-leave-from {
-    max-height: 320px;
-    opacity: 1;
-  }
-
-  /* Grid & cards */
-  .grid {
-    display: grid;
-    gap: 16px;
-    grid-template-columns: repeat(12, 1fr);
-  }
-  .card {
-    grid-column: span 12;
-    display: grid;
-    grid-template-rows: auto 1fr;
-    overflow: hidden;
-    border-radius: 16px;
-    background: #fff;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
-    transition:
-      transform 0.2s,
-      box-shadow 0.2s;
-  }
-  .card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.1);
-  }
-  @media (min-width: 640px) {
-    .card {
-      grid-column: span 6;
-    }
-  }
-  @media (min-width: 992px) {
-    .card {
-      grid-column: span 3;
-    }
-  }
-
-  .thumb-wrap {
-    position: relative;
-    aspect-ratio: 16/9;
-    background: #111;
-  }
-  .thumb {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-    opacity: 0.9;
-  }
-  .play {
-    position: absolute;
-    inset: auto auto 8px 8px;
-    background: #ffffffdb;
-    color: #111;
-    border-radius: 999px;
-    padding: 6px 10px;
-    font-weight: 700;
-  }
-
-  .body {
-    padding: 12px;
-    display: grid;
-    gap: 6px;
-  }
-  .title {
-    margin: 0;
-    font-size: 1rem;
-    font-weight: 700;
-  }
-  .desc {
-    margin: 0;
-    color: #4b5563;
-    font-size: 0.94rem;
-    min-height: 2.6em;
-  }
-  .meta {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-    margin-top: 2px;
-  }
-  .tag {
-    font-size: 0.75rem;
-    padding: 4px 8px;
-    border-radius: 999px;
-    background: #eef2ff;
-    color: #3730a3;
-  }
-
-  .pager {
-    margin-top: 18px;
-    display: flex;
-    gap: 10px;
-    justify-content: center;
-    align-items: center;
-  }
-  .btn {
-    padding: 10px 14px;
-    border-radius: 10px;
-    border: 1px solid #e5e7eb;
-    background: #fff;
-  }
-  .btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-  .pageinfo {
-    color: #6b7280;
-  }
-
-  .skeleton .thumb {
-    background: #e5e7eb;
-  }
-  .skeleton .line {
-    height: 10px;
-    background: #e5e7eb;
-    border-radius: 8px;
-    margin: 6px 0;
-  }
-  .skeleton .w60 {
-    width: 60%;
-  }
-  .skeleton .w90 {
-    width: 90%;
-  }
-
-  /* Responsive switch */
-  @media (max-width: 768px) {
-    .desktop-only {
-      display: none;
-    }
-    .mobile-only {
-      display: block;
-    }
+  .media-page { color: #1b2a1b; padding: clamp(24px, 3vw, 40px) 0; }
+  .container { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+  .media-hero { align-items: end; background: linear-gradient(135deg, #244d2b 0%, #66bb6a 100%); border-radius: 8px; color: #fff; display: grid; gap: 1.5rem; grid-template-columns: minmax(0, 1fr) 160px; margin-bottom: 1rem; padding: clamp(1.5rem, 4vw, 2.25rem); }
+  .eyebrow { font-size: 0.78rem; font-weight: 800; letter-spacing: 0.08em; margin: 0 0 0.55rem; text-transform: uppercase; }
+  .media-hero h1 { font-size: clamp(2rem, 5vw, 3.8rem); font-weight: 800; line-height: 1.05; margin: 0 0 0.75rem; }
+  .media-hero p { margin: 0; max-width: 640px; opacity: 0.92; }
+  .hero-count { background: rgba(255, 255, 255, 0.16); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 8px; padding: 1rem; }
+  .hero-count strong { display: block; font-size: 2.4rem; line-height: 1; }
+  .hero-count span { font-size: 0.8rem; font-weight: 800; text-transform: uppercase; }
+  .toolbar { display: flex; gap: 0.75rem; justify-content: flex-end; margin-bottom: 1rem; }
+  .control, .btn { background: #fff; border: 1px solid #d7e6d8; border-radius: 8px; color: #1b2a1b; padding: 0.65rem 1rem; }
+  .control:focus { border-color: #66bb6a; box-shadow: 0 0 0 3px rgba(102, 187, 106, 0.2); outline: none; }
+  .grid { display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .card { background: #fff; border: 1px solid rgba(69, 128, 81, 0.14); border-radius: 8px; box-shadow: 0 8px 24px rgba(27, 42, 27, 0.08); color: #1b2a1b; display: grid; gap: 0.85rem; overflow: hidden; padding: 1rem; }
+  .thumb-wrap { aspect-ratio: 16 / 9; background: #111; border-radius: 6px; overflow: hidden; margin: -1rem -1rem 0; position: relative; }
+  .thumb { display: block; height: 100%; object-fit: cover; opacity: 0.92; width: 100%; }
+  .play { align-items: center; background: rgba(255, 255, 255, 0.92); border-radius: 999px; bottom: 0.75rem; color: #24552d; display: inline-flex; font-size: 0.9rem; font-weight: 900; height: 34px; justify-content: center; left: 0.75rem; position: absolute; width: 34px; }
+  .meta-top { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .chip { background: #eaf6ea; border-radius: 999px; color: #24552d; font-size: 0.78rem; font-weight: 800; padding: 0.35rem 0.7rem; }
+  .chip-date { background: #fff7ed; color: #9a3412; }
+  .title { color: #1b2a1b; font-size: 1.25rem; font-weight: 800; margin: 0; }
+  .content { color: #374151; line-height: 1.65; margin: 0; }
+  .pager { align-items: center; color: #1b2a1b; display: flex; gap: 0.75rem; justify-content: center; margin-top: 1.25rem; }
+  .btn:disabled { cursor: not-allowed; opacity: 0.55; }
+  .empty { color: #6b7280; text-align: center; }
+  .skeleton .thumb, .skeleton .line { background: #e5e7eb; border-radius: 8px; }
+  .skeleton .thumb { aspect-ratio: 16 / 9; margin: -1rem -1rem 0; }
+  .skeleton .line { height: 12px; }
+  .skeleton .w60 { width: 60%; }
+  .skeleton .w90 { width: 90%; }
+  @media (max-width: 760px) {
+    .media-hero, .grid { grid-template-columns: 1fr; }
+    .toolbar { align-items: stretch; flex-direction: column; }
   }
 </style>

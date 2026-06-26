@@ -2,7 +2,6 @@
   <nav class="navbar navbar-expand-lg navbar-eco sticky-top">
     <div class="container">
       <RouterLink class="navbar-brand d-flex align-items-center gap-2" to="/">
-        <!-- Ако сликата е во public/img, користи /img/logo4.png -->
         <img src="../img/logo4.png" alt="ЕкоСреќа" style="height: 40px; width: auto" />
       </RouterLink>
 
@@ -13,7 +12,7 @@
         data-bs-target="#ecoNav"
         aria-controls="ecoNav"
         aria-expanded="false"
-        aria-label="Toggle navigation"
+        aria-label="Отвори навигација"
       >
         <span class="navbar-toggler-icon"></span>
       </button>
@@ -21,35 +20,24 @@
       <div class="collapse navbar-collapse" id="ecoNav">
         <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
           <li class="nav-item">
-            <RouterLink
-              class="nav-link"
-              :class="{ active: route.path.startsWith('/news') }"
-              to="/news"
-              >Вести</RouterLink
-            >
+            <RouterLink class="nav-link" :class="{ active: route.path.startsWith('/news') }" to="/news">
+              Вести
+            </RouterLink>
           </li>
           <li class="nav-item">
-            <RouterLink
-              class="nav-link"
-              :class="{ active: route.path.startsWith('/fun') }"
-              to="/fun"
-              >Забава</RouterLink
-            >
+            <RouterLink class="nav-link" :class="{ active: route.path.startsWith('/fun') }" to="/fun">
+              Забава
+            </RouterLink>
           </li>
           <li class="nav-item">
-            <RouterLink
-              class="nav-link"
-              :class="{ active: route.path.startsWith('/about') }"
-              to="/about"
-              >За нас</RouterLink
-            >
+            <RouterLink class="nav-link" :class="{ active: route.path.startsWith('/about') }" to="/about">
+              За нас
+            </RouterLink>
           </li>
         </ul>
 
-        <!-- Auth Section -->
         <div class="ms-lg-3 mt-2 mt-lg-0 d-flex gap-2 align-items-center flex-wrap">
           <template v-if="authStore.isAuthenticated">
-            <!-- User Dropdown -->
             <div class="dropdown">
               <button
                 class="btn btn-sm eco-btn dropdown-toggle text-white px-3"
@@ -73,7 +61,7 @@
                 </li>
                 <li>
                   <RouterLink class="dropdown-item" to="/admin">
-                    <i class="bi bi-shield-check me-2"></i>Admin
+                    <i class="bi bi-shield-check me-2"></i>Админ
                   </RouterLink>
                 </li>
                 <li><hr class="dropdown-divider" /></li>
@@ -87,7 +75,6 @@
           </template>
 
           <template v-else>
-            <!-- Login/Signup Buttons -->
             <RouterLink
               to="/login"
               class="btn btn-sm btn-outline-light text-white px-3"
@@ -104,6 +91,7 @@
     </div>
   </nav>
 </template>
+
 <script setup>
   import { useRoute, useRouter } from 'vue-router';
   import { useAuthStore } from '../stores/authStore';
@@ -112,10 +100,10 @@
   const router = useRouter();
   const authStore = useAuthStore();
 
-  const handleLogout = () => {
+  function handleLogout() {
     authStore.logout();
     router.push('/');
-  };
+  }
 </script>
 
 <style scoped>
@@ -141,15 +129,5 @@
 
   .btn-outline-light:hover {
     background: rgba(255, 255, 255, 0.1);
-  }
-
-  @media (max-width: 991px) {
-    .navbar-collapse {
-      margin-top: 1rem;
-    }
-
-    .d-flex {
-      margin-top: 1rem;
-    }
   }
 </style>

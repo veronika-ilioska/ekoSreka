@@ -1,78 +1,61 @@
 <template>
   <section class="eco-section eco-horoscope">
     <div class="container">
-      <header class="hor-header">
-        <h2 class="eco-section-title">Хороскоп</h2>
-
-        <!-- ФИЛТЕР ПАНЕЛ (responsive) -->
-        <form class="filters" @submit.prevent="apply">
-          <div class="field">
-            <label for="sign">Знак</label>
-            <select id="sign" v-model="sign">
-              <option v-for="z in signs" :key="z.value" :value="z.value">{{ z.label }}</option>
-            </select>
-          </div>
-
-          <div class="field">
-            <label for="ptype">Период</label>
-            <select id="ptype" v-model="periodType">
-              <option value="DAILY">Дневен</option>
-              <option value="WEEKLY">Неделен</option>
-              <option value="MONTHLY">Месечен</option>
-            </select>
-          </div>
-
-          <div class="field">
-            <label for="pdate">Датум</label>
-            <input id="pdate" type="date" v-model="date" :max="today" />
-            <small class="hint">Остави празно за „најново“</small>
-          </div>
-
-          <div class="actions">
-            <button type="submit" class="btn primary" :disabled="loading">Примени</button>
-            <button type="button" class="btn" @click="clearDate" :disabled="loading">
-              Без датум
-            </button>
-          </div>
-        </form>
+      <header class="hor-hero">
+        <div>
+          <p class="eyebrow">Еко хороскоп</p>
+          <h1>Сите хороскопски објави</h1>
+          <p>Разгледај ја целата историја на еко хороскопи што биле додадени во секцијата.</p>
+        </div>
+        <div class="hero-count">
+          <strong>{{ totalItems }}</strong>
+          <span>објави</span>
+        </div>
       </header>
 
-      <!-- СОДРЖИНА -->
-      <div class="grid">
-        <!-- skeleton -->
-        <article v-if="loading" class="card skeleton">
+      <div v-if="loading && entries.length === 0" class="grid">
+        <article v-for="i in size" :key="i" class="card skeleton">
           <div class="line w40"></div>
           <div class="line w90"></div>
           <div class="line w70"></div>
         </article>
+      </div>
 
-        <!-- податок -->
-        <article v-else-if="item" class="card">
+      <div v-else-if="entries.length" class="grid">
+        <article v-for="entry in entries" :key="entry.id" class="card">
           <div class="meta-top">
-            <span class="chip">{{ signLabel(sign) }}</span>
-            <span class="chip chip-soft">{{ periodLabel(periodType) }}</span>
-            <span class="chip chip-date">{{ item.periodDate }}</span>
+            <span class="chip">{{ signLabel(entry.sign) }}</span>
+            <span class="chip chip-date">{{ formatUploadTime(entry.createdAt) }}</span>
           </div>
-          <h3 class="title">{{ item.title }}</h3>
-          <p class="content">{{ item.content }}</p>
-
-          <div class="eco-tip" v-if="item.ecoTip">
-            <span class="leaf" aria-hidden="true">🌿</span>
-            <strong>Еко совет:</strong> {{ item.ecoTip }}
+          <h2 class="title">{{ entry.title }}</h2>
+          <p class="content">{{ entry.content }}</p>
+          <div class="eco-tip" v-if="entry.ecoTip">
+            <strong>Еко совет:</strong>
+            <span>{{ entry.ecoTip }}</span>
           </div>
-        </article>
-
-        <!-- празно -->
-        <article v-else class="card empty">
-          <p>Нема пронајден запис за селекцијата.</p>
         </article>
       </div>
+
+      <article v-else class="card empty">
+        <p>Сè уште нема додадени хороскопски објави.</p>
+      </article>
+
+      <footer class="pager" v-if="totalPages > 1">
+        <button class="btn" :disabled="page === 0 || loading" @click="goPage(page - 1)">
+          Претходна
+        </button>
+        <span>Страна {{ page + 1 }} од {{ totalPages }}</span>
+        <button class="btn" :disabled="page >= totalPages - 1 || loading" @click="goPage(page + 1)">
+          Следна
+        </button>
+      </footer>
     </div>
   </section>
 </template>
 
 <script setup>
-  import { ref, onMounted } from 'vue';
+  import { onMounted, ref } from 'vue';
+  import { api } from '../api';
 
   const signs = [
     { value: 'ARIES', label: 'Овен' },
@@ -89,217 +72,237 @@
     { value: 'PISCES', label: 'Риби' },
   ];
 
-  const sign = ref('ARIES');
-  const periodType = ref('DAILY');
-  const date = ref(''); // формат YYYY-MM-DD
-  const today = new Date().toISOString().slice(0, 10);
-
-  const item = ref(null);
+  const entries = ref([]);
   const loading = ref(false);
+  const page = ref(0);
+  const size = ref(12);
+  const totalPages = ref(0);
+  const totalItems = ref(0);
 
-  function signLabel(val) {
-    const s = signs.find((x) => x.value === val);
-    return s ? s.label : val;
-  }
-  function periodLabel(p) {
-    return p === 'DAILY' ? 'Дневен' : p === 'WEEKLY' ? 'Неделен' : 'Месечен';
+  function signLabel(value) {
+    return signs.find((sign) => sign.value === value)?.label || value;
   }
 
-  async function loadLatest() {
+  function formatUploadTime(value) {
+    if (!value) return 'Непознато време';
+    return new Date(value).toLocaleString('mk-MK', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    });
+  }
+
+  async function loadEntries() {
     loading.value = true;
     try {
-      const url = new URL('/api/horoscope/latest', window.location.origin);
-      url.searchParams.set('sign', sign.value);
-      const res = await fetch(url, { headers: { Accept: 'application/json' } });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      item.value = await res.json();
-    } catch (e) {
-      console.error('latest error', e);
-      item.value = null;
+      const { data } = await api.get('/horoscope', {
+        params: { page: page.value, size: size.value },
+      });
+      entries.value = data.content ?? [];
+      totalPages.value = data.totalPages ?? 0;
+      totalItems.value = data.totalElements ?? entries.value.length;
+    } catch (error) {
+      if (error?.response?.status === 404) {
+        await loadLegacyEntries();
+      } else {
+        console.error('Грешка при вчитување хороскоп:', error);
+        entries.value = [];
+        totalPages.value = 0;
+        totalItems.value = 0;
+      }
     } finally {
       loading.value = false;
     }
   }
 
-  async function loadByPeriod() {
-    loading.value = true;
-    try {
-      const url = new URL('/api/horoscope/by-period', window.location.origin);
-      url.searchParams.set('sign', sign.value);
-      url.searchParams.set('periodType', periodType.value);
-      url.searchParams.set('date', date.value);
-      const res = await fetch(url, { headers: { Accept: 'application/json' } });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      item.value = await res.json();
-    } catch (e) {
-      console.error('by-period error', e);
-      item.value = null;
-    } finally {
-      loading.value = false;
-    }
+  async function loadLegacyEntries() {
+    const countRequest = api.get('/horoscope/count').catch(() => ({ data: { count: 0 } }));
+    const entryRequests = signs.map((sign) =>
+      api
+        .get('/horoscope/latest', { params: { sign: sign.value } })
+        .then(({ data }) => data)
+        .catch(() => null)
+    );
+    const [countResponse, ...latestEntries] = await Promise.all([countRequest, ...entryRequests]);
+    entries.value = latestEntries.filter(Boolean);
+    totalPages.value = 1;
+    totalItems.value = Number(countResponse.data?.count ?? entries.value.length);
   }
 
-  function clearDate() {
-    date.value = '';
-    apply();
-  }
-  function apply() {
-    if (!date.value) return loadLatest();
-    return loadByPeriod();
+  function goPage(nextPage) {
+    page.value = Math.max(0, nextPage);
+    loadEntries();
   }
 
-  onMounted(loadLatest);
+  onMounted(loadEntries);
 </script>
 
 <style scoped>
   .eco-section {
+    color: #1b2a1b;
     padding: clamp(24px, 3vw, 40px) 0;
   }
+
   .container {
-    max-width: 860px;
+    max-width: 1040px;
     margin: 0 auto;
     padding: 0 16px;
   }
 
-  .hor-header {
-    display: grid;
-    gap: 12px;
-    margin-bottom: 16px;
-  }
-  .eco-section-title {
-    margin: 0;
-  }
-
-  .filters {
-    display: grid;
-    gap: 10px;
-    grid-template-columns: 1fr 1fr 1fr auto auto;
+  .hor-hero {
     align-items: end;
-  }
-  @media (max-width: 720px) {
-    .filters {
-      grid-template-columns: 1fr 1fr;
-    }
-    .actions {
-      grid-column: 1 / -1;
-      display: flex;
-      gap: 8px;
-    }
-  }
-  .field {
+    background: linear-gradient(135deg, #244d2b 0%, #66bb6a 100%);
+    border-radius: 8px;
+    color: #fff;
     display: grid;
-    gap: 6px;
-  }
-  .field label {
-    font-size: 0.85rem;
-    color: #374151;
-  }
-  .field select,
-  .field input[type='date'] {
-    padding: 10px 12px;
-    border-radius: 10px;
-    border: 1px solid #e5e7eb;
-    background: #fff;
-  }
-  .hint {
-    color: #6b7280;
-    font-size: 0.78rem;
+    gap: 1.5rem;
+    grid-template-columns: minmax(0, 1fr) 160px;
+    margin-bottom: 1.25rem;
+    padding: clamp(1.5rem, 4vw, 2.25rem);
   }
 
-  .actions {
-    display: flex;
-    gap: 8px;
+  .eyebrow {
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    margin: 0 0 0.55rem;
+    text-transform: uppercase;
   }
-  .btn {
-    padding: 10px 14px;
-    border-radius: 10px;
-    border: 1px solid #e5e7eb;
-    background: #fff;
+
+  .hor-hero h1 {
+    font-size: clamp(2rem, 5vw, 3.8rem);
+    font-weight: 800;
+    line-height: 1.05;
+    margin: 0 0 0.75rem;
   }
-  .btn.primary {
-    background: #2563eb;
-    color: #fff;
-    border-color: #1d4ed8;
+
+  .hor-hero p {
+    margin: 0;
+    max-width: 640px;
+    opacity: 0.92;
   }
-  .btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
+
+  .hero-count {
+    background: rgba(255, 255, 255, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    padding: 1rem;
+  }
+
+  .hero-count strong {
+    display: block;
+    font-size: 2.4rem;
+    line-height: 1;
+  }
+
+  .hero-count span {
+    font-size: 0.8rem;
+    font-weight: 800;
+    text-transform: uppercase;
   }
 
   .grid {
     display: grid;
-    gap: 14px;
+    gap: 1rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
   .card {
     background: #fff;
-    border-radius: 16px;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
-    padding: 14px;
+    border: 1px solid rgba(69, 128, 81, 0.14);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(27, 42, 27, 0.08);
+    color: #1b2a1b;
     display: grid;
-    gap: 10px;
+    gap: 0.85rem;
+    padding: 1rem;
   }
+
   .meta-top {
     display: flex;
-    gap: 8px;
     flex-wrap: wrap;
+    gap: 0.5rem;
   }
+
   .chip {
-    padding: 4px 10px;
+    background: #eaf6ea;
     border-radius: 999px;
-    background: #eef2ff;
-    color: #3730a3;
-    font-size: 0.8rem;
+    color: #24552d;
+    font-size: 0.78rem;
+    font-weight: 800;
+    padding: 0.35rem 0.7rem;
   }
-  .chip-soft {
-    background: #e5f4ff;
-    color: #0b66a7;
-  }
+
   .chip-date {
     background: #fff7ed;
     color: #9a3412;
   }
+
   .title {
+    color: #1b2a1b;
+    font-size: 1.25rem;
+    font-weight: 800;
     margin: 0;
-    font-weight: 700;
-    font-size: 1.1rem;
   }
+
   .content {
-    margin: 0;
     color: #374151;
-    line-height: 1.6;
+    line-height: 1.65;
+    margin: 0;
   }
+
   .eco-tip {
     background: #f0fdf4;
-    color: #166534;
     border: 1px solid #bbf7d0;
-    border-radius: 12px;
-    padding: 10px 12px;
-    display: flex;
-    gap: 8px;
-    align-items: center;
+    border-radius: 8px;
+    color: #166534;
+    display: grid;
+    gap: 0.2rem;
+    padding: 0.85rem;
   }
-  .leaf {
-    font-size: 1.1rem;
+
+  .pager {
+    align-items: center;
+    color: #1b2a1b;
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    margin-top: 1.25rem;
+  }
+
+  .btn {
+    background: #fff;
+    border: 1px solid #d7e6d8;
+    border-radius: 8px;
+    padding: 0.65rem 1rem;
   }
 
   .skeleton .line {
-    height: 12px;
     background: #e5e7eb;
     border-radius: 10px;
+    height: 12px;
   }
+
   .skeleton .w40 {
     width: 40%;
-    margin-bottom: 6px;
   }
+
   .skeleton .w90 {
     width: 90%;
-    margin-bottom: 6px;
   }
+
   .skeleton .w70 {
     width: 70%;
   }
+
   .empty {
-    text-align: center;
     color: #6b7280;
+    text-align: center;
+  }
+
+  @media (max-width: 760px) {
+    .hor-hero,
+    .grid {
+      grid-template-columns: 1fr;
+    }
   }
 </style>

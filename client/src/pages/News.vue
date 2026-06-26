@@ -1,7 +1,7 @@
 <template>
   <section class="mb-4">
     <div class="d-flex align-items-center justify-content-between">
-      <div class="btn-group">
+      <div class="btn-group flex-wrap">
         <button
           class="btn btn-sm btn-outline-success"
           :class="{ active: !category }"
@@ -10,32 +10,13 @@
           Сите
         </button>
         <button
+          v-for="item in categories"
+          :key="item"
           class="btn btn-sm btn-outline-success"
-          :class="{ active: category === 'recycling' }"
-          @click="setCategory('recycling')"
+          :class="{ active: category === item }"
+          @click="setCategory(item)"
         >
-          Рециклирање
-        </button>
-        <button
-          class="btn btn-sm btn-outline-success"
-          :class="{ active: category === 'energy' }"
-          @click="setCategory('energy')"
-        >
-          Енергија
-        </button>
-        <button
-          class="btn btn-sm btn-outline-success"
-          :class="{ active: category === 'nature' }"
-          @click="setCategory('nature')"
-        >
-          Природа
-        </button>
-        <button
-          class="btn btn-sm btn-outline-success"
-          :class="{ active: category === 'climate' }"
-          @click="setCategory('climate')"
-        >
-          Клима
+          {{ item }}
         </button>
       </div>
     </div>
@@ -89,7 +70,9 @@
   const page = ref(0);
   const size = ref(12);
 
-  // читај ја категоријата од URL (на пр. /news?category=energy)
+  const categories = ['Рециклирање', 'Енергија', 'Природа', 'Клима'];
+
+  // читај ја категоријата од URL
   const category = ref(route.query.category ? String(route.query.category) : undefined);
 
   async function load() {

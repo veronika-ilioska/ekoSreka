@@ -3,6 +3,7 @@ package com.ekosrekja.ekosrekjafullstack.fun.entity;
 import com.ekosrekja.ekosrekjafullstack.fun.PeriodType;
 import com.ekosrekja.ekosrekjafullstack.fun.ZodiacSign;
 import jakarta.persistence.*;
+import java.time.Instant;
 import java.time.LocalDate;
 import lombok.Getter;
 import lombok.Setter;
@@ -30,6 +31,16 @@ public class HoroscopeEntry {
     private String content;
 
     private String ecoTip;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
+
+    @PrePersist
+    protected void onCreate() {
+        if (createdAt == null) {
+            createdAt = Instant.now();
+        }
+    }
 }
 
 
