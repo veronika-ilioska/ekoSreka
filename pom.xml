@@ -101,6 +101,16 @@
                     </annotationProcessorPaths>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+
+                <configuration>
+                    <mainClass>
+                        com.ekosrekja.ekosrekjafullstack.EkosrekjaFullstackApplication
+                    </mainClass>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 
