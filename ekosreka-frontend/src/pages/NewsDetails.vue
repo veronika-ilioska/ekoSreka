@@ -27,7 +27,7 @@
 <script setup>
   import { computed, onMounted, ref } from 'vue';
   import { useRoute } from 'vue-router';
-  import { api } from '../api';
+  import  api  from '../api';
 
   const route = useRoute();
   const article = ref(null);

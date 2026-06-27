@@ -50,7 +50,7 @@
 <script setup>
   import { computed, onMounted, ref } from 'vue';
   import { RouterLink } from 'vue-router';
-  import { api } from '../api';
+  import  api  from '../api';
   import beforeImage from '../img/before1.jpg';
   import afterImage from '../img/after1.jpg';
   import gameImage from '../img/game.png';

@@ -64,7 +64,7 @@
 
 <script setup>
   import { onMounted, ref } from 'vue';
-  import { api } from '../api';
+  import  api  from '../api';
 
   const items = ref([]);
   const page = ref(0);

@@ -109,7 +109,7 @@
 <script setup>
   import { computed, onMounted, ref } from 'vue';
   import { RouterLink, useRoute } from 'vue-router';
-  import { api } from '../api';
+  import  api  from '../api';
 
   const route = useRoute();
   const quizId = Number(route.params.id);

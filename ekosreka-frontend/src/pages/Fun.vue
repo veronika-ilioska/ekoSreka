@@ -25,7 +25,7 @@
 
 <script setup>
   import { onMounted, reactive } from 'vue';
-  import { api } from '../api';
+  import  api  from '../api';
 
   const counts = reactive({ photos: 0, videos: 0, horoscope: 0, games: 0 });
 

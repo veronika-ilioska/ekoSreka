@@ -55,7 +55,7 @@
 
 <script setup>
   import { onMounted, ref } from 'vue';
-  import { api } from '../api';
+  import  api  from '../api';
 
   const signs = [
     { value: 'ARIES', label: 'Овен' },

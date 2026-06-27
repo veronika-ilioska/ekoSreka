@@ -58,7 +58,7 @@
 <script setup>
   import { onMounted, ref, watch } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
-  import { api } from '../api';
+  import  api  from '../api';
   import NewsCard from '../components/NewsCard.vue';
 
   const route = useRoute();
