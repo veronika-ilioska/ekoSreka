@@ -12,7 +12,10 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = "*")
+@CrossOrigin(
+        origins = "https://ekosreka-frontend.onrender.com",
+        allowCredentials = "true"
+)
 public class AuthController {
 
     @Autowired private AuthService authService;
