@@ -1,8 +1,10 @@
 package com.ekosrekja.ekosrekjafullstack.config;
 
 import java.util.List;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -25,9 +27,9 @@ public class SecurityConfig {
     SecurityFilterChain filter(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
-                .cors(cors -> {})
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(req -> req
-                        .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
                         .anyRequest().permitAll()
                 );
@@ -37,22 +39,31 @@ public class SecurityConfig {
 
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
-        var cfg = new CorsConfiguration();
+        CorsConfiguration cfg = new CorsConfiguration();
 
         cfg.setAllowedOrigins(List.of(
                 "http://localhost:5173",
-                "http://localhost:5175"
+                "http://localhost:5175",
+                "https://ekosreka-frontend.onrender.com"
         ));
 
-        cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+        cfg.setAllowedMethods(List.of(
+                "GET",
+                "POST",
+                "PUT",
+                "DELETE",
+                "PATCH",
+                "OPTIONS"
+        ));
+
         cfg.setAllowedHeaders(List.of("*"));
         cfg.setAllowCredentials(true);
 
-        var src = new UrlBasedCorsConfigurationSource();
+        UrlBasedCorsConfigurationSource src =
+                new UrlBasedCorsConfigurationSource();
+
         src.registerCorsConfiguration("/**", cfg);
+
         return src;
     }
-
 }
-
-
