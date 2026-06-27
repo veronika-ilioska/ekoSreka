@@ -104,13 +104,52 @@
           </form>
         </aside>
       </div>
+
+      <article class="profile-panel history-panel">
+        <div class="panel-heading">
+          <h2>Историја на квизови</h2>
+          <p>Следи ги квизовите што си ги решил и историјата на резултатите.</p>
+        </div>
+
+        <div class="history-summary">
+          <div>
+            <span>Квизови</span>
+            <strong>{{ quizHistory.length }}</strong>
+          </div>
+          <div>
+            <span>Најдобар резултат</span>
+            <strong>{{ bestScoreLabel }}</strong>
+          </div>
+          <div>
+            <span>Просек</span>
+            <strong>{{ averageScoreLabel }}</strong>
+          </div>
+        </div>
+
+        <div v-if="historyLoading" class="history-empty">Историјата се вчитува...</div>
+        <div v-else-if="quizHistory.length === 0" class="history-empty">Сè уште немаш решени квизови.</div>
+        <div v-else class="history-list">
+          <RouterLink
+            v-for="attempt in quizHistory"
+            :key="attempt.id"
+            class="history-row"
+            :to="`/quizzes/${attempt.quizId}`"
+          >
+            <div>
+              <strong>{{ attempt.quizTitle }}</strong>
+              <span>{{ formatAttemptDate(attempt.createdAt) }}</span>
+            </div>
+            <span class="score-pill">{{ attempt.score }}/{{ attempt.total }}</span>
+          </RouterLink>
+        </div>
+      </article>
     </div>
   </section>
 </template>
 
 <script setup>
   import { computed, onMounted, reactive, ref } from 'vue';
-  import { useRouter } from 'vue-router';
+  import { RouterLink, useRouter } from 'vue-router';
   import  api  from '../api';
   import { useAuthStore } from '../stores/authStore';
 
@@ -124,6 +163,8 @@
   const formError = ref('');
   const passwordError = ref('');
   const successMessage = ref('');
+  const quizHistory = ref([]);
+  const historyLoading = ref(false);
   const form = reactive({ firstName: '', lastName: '', email: '' });
   const passwordForm = reactive({ currentPassword: '', newPassword: '', confirmPassword: '' });
 
@@ -151,6 +192,18 @@
     });
   });
 
+  const bestScoreLabel = computed(() => {
+    if (!quizHistory.value.length) return '0%';
+    const best = Math.max(...quizHistory.value.map(scorePercent));
+    return `${best}%`;
+  });
+
+  const averageScoreLabel = computed(() => {
+    if (!quizHistory.value.length) return '0%';
+    const total = quizHistory.value.reduce((sum, attempt) => sum + scorePercent(attempt), 0);
+    return `${Math.round(total / quizHistory.value.length)}%`;
+  });
+
   function fillForm() {
     form.firstName = user.value?.firstName || '';
     form.lastName = user.value?.lastName || '';
@@ -173,6 +226,21 @@
       fillForm();
     } catch (error) {
       pageError.value = error.response?.data?.message || 'Профилот не може да се вчита.';
+    }
+  }
+
+  async function loadQuizHistory() {
+    if (!requireLogin()) return;
+    historyLoading.value = true;
+    try {
+      const { data } = await api.get('/quizzes/me/history', {
+        headers: { 'X-User-Id': authStore.userId },
+      });
+      quizHistory.value = data;
+    } catch (error) {
+      pageError.value = error.response?.data?.message || 'Историјата на квизови не може да се вчита.';
+    } finally {
+      historyLoading.value = false;
     }
   }
 
@@ -249,7 +317,24 @@
     }
   }
 
-  onMounted(loadProfile);
+  function scorePercent(attempt) {
+    if (!attempt?.total) return 0;
+    return Math.round((attempt.score / attempt.total) * 100);
+  }
+
+  function formatAttemptDate(value) {
+    if (!value) return 'Без датум';
+    return new Date(value).toLocaleDateString('mk-MK', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  }
+
+  onMounted(async () => {
+    await loadProfile();
+    await loadQuizHistory();
+  });
 </script>
 
 <style scoped>
@@ -265,27 +350,65 @@
 
   .profile-hero {
     align-items: center;
-    background: linear-gradient(135deg, #458051 0%, #66bb6a 100%);
+    background:
+      linear-gradient(135deg, rgba(27, 77, 43, 0.94), rgba(46, 125, 50, 0.82)),
+      url('../img/guide.svg') right 2rem center / 180px no-repeat;
     border-radius: 8px;
     color: #fff;
     display: grid;
     gap: 1.5rem;
     grid-template-columns: auto 1fr auto;
     margin-bottom: 1.5rem;
-    padding: 2rem;
+    min-height: 260px;
+    padding: clamp(1.5rem, 4vw, 2.5rem);
+  }
+
+  .hero-copy {
+    max-width: 680px;
+  }
+
+  .eyebrow {
+    font-size: 0.78rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    margin: 0 0 0.75rem;
+    text-transform: uppercase;
+  }
+
+  .profile-hero h1 {
+    font-size: clamp(2.2rem, 6vw, 4.4rem);
+    font-weight: 900;
+    letter-spacing: 0;
+    line-height: 0.98;
+    margin: 0 0 1rem;
+  }
+
+  .profile-hero p {
+    font-size: 1rem;
+    line-height: 1.7;
+    margin: 0;
+    opacity: 0.92;
   }
 
   .avatar {
     align-items: center;
     aspect-ratio: 1;
-    background: rgba(255, 255, 255, 0.2);
-    border: 3px solid rgba(255, 255, 255, 0.75);
-    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: 8px;
     display: flex;
     font-size: 2rem;
-    font-weight: 800;
+    font-weight: 900;
     justify-content: center;
     width: 96px;
+  }
+
+  .edit-button {
+    background: #fff;
+    border: none;
+    color: #24552d;
+    font-weight: 900;
+    min-height: 44px;
   }
 
   .profile-grid {
@@ -298,15 +421,49 @@
     background: var(--eco-card-bg);
     border: 1px solid rgba(69, 128, 81, 0.15);
     border-radius: 8px;
-    box-shadow: 0 8px 24px rgba(27, 42, 27, 0.08);
+    box-shadow: 0 10px 30px rgba(27, 42, 27, 0.08);
     padding: 1.5rem;
   }
 
+  .panel-heading {
+    margin-bottom: 1rem;
+  }
+
+  .panel-heading h2,
+  .profile-panel h2 {
+    color: #1b2a1b;
+    font-size: 1.35rem;
+    font-weight: 900;
+    margin: 0 0 0.25rem;
+  }
+
+  .panel-heading p,
+  .side-copy {
+    color: #506650;
+    margin: 0;
+  }
+
   .detail-row {
-    border-bottom: 1px solid rgba(69, 128, 81, 0.15);
-    display: flex;
-    justify-content: space-between;
-    padding: 1rem 0;
+    background: rgba(102, 187, 106, 0.07);
+    border: 1px solid rgba(69, 128, 81, 0.14);
+    border-radius: 8px;
+    display: grid;
+    gap: 0.25rem;
+    padding: 1rem;
+  }
+
+  .details-list {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .detail-row span,
+  .history-summary span,
+  .history-row span {
+    color: #506650;
+    font-size: 0.76rem;
+    font-weight: 900;
+    text-transform: uppercase;
   }
 
   .profile-form,
@@ -318,6 +475,28 @@
   .form-field {
     display: grid;
     gap: 0.45rem;
+    background: rgba(102, 187, 106, 0.07);
+    border: 1px solid rgba(69, 128, 81, 0.14);
+    border-radius: 8px;
+    padding: 1rem;
+  }
+
+  .form-field label {
+    color: #24552d;
+    font-size: 0.82rem;
+    font-weight: 900;
+    text-transform: uppercase;
+  }
+
+  .form-control {
+    border: 1px solid #d7e6d8;
+    border-radius: 8px;
+    min-height: 44px;
+  }
+
+  .form-control:focus {
+    border-color: #66bb6a;
+    box-shadow: 0 0 0 3px rgba(102, 187, 106, 0.2);
   }
 
   .form-actions {
@@ -325,10 +504,77 @@
     gap: 0.75rem;
   }
 
+  .history-panel {
+    margin-top: 1.5rem;
+  }
+
+  .history-summary {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin-bottom: 1rem;
+  }
+
+  .history-summary > div,
+  .history-row,
+  .history-empty {
+    background: rgba(102, 187, 106, 0.08);
+    border: 1px solid rgba(69, 128, 81, 0.15);
+    border-radius: 8px;
+    padding: 1rem;
+  }
+
+  .history-summary span,
+  .history-row span {
+    color: #506650;
+  }
+
+  .history-summary strong {
+    display: block;
+    font-size: 1.6rem;
+  }
+
+  .history-list {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .history-row {
+    align-items: center;
+    color: inherit;
+    display: flex;
+    justify-content: space-between;
+    text-decoration: none;
+  }
+
+  .history-row > div {
+    display: grid;
+    gap: 0.25rem;
+  }
+
+  .score-pill {
+    background: #2e7d32;
+    border-radius: 999px;
+    color: #fff !important;
+    padding: 0.45rem 0.75rem;
+    white-space: nowrap;
+  }
+
   @media (max-width: 991px) {
     .profile-grid,
+    .history-summary,
     .profile-hero {
       grid-template-columns: 1fr;
+    }
+
+    .profile-hero {
+      background:
+        linear-gradient(135deg, rgba(27, 77, 43, 0.94), rgba(46, 125, 50, 0.84)),
+        url('../img/guide.svg') right 1rem bottom 1rem / 120px no-repeat;
+    }
+
+    .avatar {
+      width: 72px;
     }
   }
 </style>

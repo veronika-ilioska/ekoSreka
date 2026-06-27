@@ -110,7 +110,9 @@
   import { computed, onMounted, ref } from 'vue';
   import { RouterLink, useRoute } from 'vue-router';
   import  api  from '../api';
+  import { useAuthStore } from '../stores/authStore';
 
+  const authStore = useAuthStore();
   const route = useRoute();
   const quizId = Number(route.params.id);
   const quiz = ref(null);
@@ -160,7 +162,8 @@
     submitting.value = true;
     try {
       const payload = Object.entries(answers.value).map(([qid, oid]) => ({ questionId: Number(qid), optionId: Number(oid) }));
-      const { data } = await api.post(`/quizzes/${quizId}/submit`, payload);
+      const headers = authStore.userId ? { 'X-User-Id': authStore.userId } : {};
+      const { data } = await api.post(`/quizzes/${quizId}/submit`, payload, { headers });
       result.value = data;
     } finally {
       submitting.value = false;
@@ -201,27 +204,69 @@
   }
   .quiz-run-shell {
     margin: 0 auto;
-    max-width: 920px;
+    max-width: 960px;
   }
   .run-hero,
   .question-card,
   .results-panel,
   .state-card {
     background: var(--eco-card-bg);
+    border: 1px solid rgba(69, 128, 81, 0.15);
     border-radius: 8px;
-    box-shadow: 0 8px 24px rgba(27, 42, 27, 0.08);
+    box-shadow: 0 10px 30px rgba(27, 42, 27, 0.08);
     padding: 1.5rem;
   }
   .run-hero {
-    background: linear-gradient(135deg, rgba(36, 77, 43, 0.95), rgba(69, 128, 81, 0.9)), url('../img/quiz.png') center / cover;
+    background:
+      linear-gradient(115deg, rgba(19, 67, 37, 0.96) 0%, rgba(46, 125, 50, 0.9) 50%, rgba(46, 125, 50, 0.38) 100%),
+      url('../img/quiz.png') right center / contain no-repeat;
     color: #fff;
+    isolation: isolate;
     margin-bottom: 1rem;
+    min-height: 250px;
+    overflow: hidden;
+    padding: clamp(1.5rem, 4vw, 2.5rem);
+    position: relative;
+  }
+  .run-hero::after {
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 50%;
+    color: rgba(255, 255, 255, 0.2);
+    content: '?';
+    display: grid;
+    font-size: 7rem;
+    font-weight: 900;
+    height: 160px;
+    place-items: center;
+    position: absolute;
+    right: 260px;
+    top: -44px;
+    width: 160px;
+    z-index: -1;
+  }
+  .run-hero h1 {
+    font-size: clamp(2rem, 5vw, 4rem);
+    font-weight: 900;
+    letter-spacing: 0;
+    line-height: 1;
+    margin: 0 0 0.75rem;
+    max-width: 760px;
+  }
+  .run-hero p {
+    line-height: 1.7;
+    margin: 0 0 1rem;
+    max-width: 680px;
+    opacity: 0.92;
   }
   .back-link {
+    background: rgba(255, 255, 255, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.26);
+    border-radius: 8px;
     color: #fff;
     display: inline-block;
     font-weight: 800;
     margin-bottom: 1rem;
+    padding: 0.45rem 0.75rem;
     text-decoration: none;
   }
   .run-meta,
@@ -231,15 +276,63 @@
     flex-wrap: wrap;
     gap: 0.75rem;
   }
+  .run-meta {
+    margin-bottom: 1rem;
+  }
+  .run-meta span {
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    border-radius: 8px;
+    color: #1b4d2b;
+    font-size: 0.8rem;
+    font-weight: 900;
+    padding: 0.35rem 0.65rem;
+    text-transform: uppercase;
+  }
   .progress-track {
-    background: rgba(255, 255, 255, 0.24);
+    background: rgba(255, 255, 255, 0.28);
     border-radius: 999px;
-    height: 9px;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    height: 12px;
     overflow: hidden;
   }
   .progress-bar {
-    background: #b9f6ca;
+    background: repeating-linear-gradient(45deg, #b9f6ca 0 12px, #8be79f 12px 24px);
     height: 100%;
+  }
+  .question-card {
+    border-top: 6px solid #1b4d2b;
+    display: grid;
+    gap: 1rem;
+    position: relative;
+  }
+  .question-card::after {
+    background: #e8f5e9;
+    border-radius: 8px;
+    color: #2e7d32;
+    content: '?';
+    display: grid;
+    font-size: 2rem;
+    font-weight: 900;
+    height: 56px;
+    place-items: center;
+    position: absolute;
+    right: 1rem;
+    top: 1rem;
+    width: 56px;
+  }
+  .question-topline {
+    color: #2e7d32;
+    font-size: 0.8rem;
+    font-weight: 900;
+    text-transform: uppercase;
+  }
+  .question-card h2 {
+    color: #1b2a1b;
+    font-size: 1.45rem;
+    font-weight: 900;
+    margin: 0;
+    padding-right: 72px;
   }
   .options,
   .result-list {
@@ -247,20 +340,36 @@
     gap: 0.75rem;
   }
   .option {
-    background: rgba(102, 187, 106, 0.08);
+    align-items: center;
+    background: #fff;
     border: 1px solid rgba(69, 128, 81, 0.18);
     border-radius: 8px;
     cursor: pointer;
     display: flex;
     gap: 0.8rem;
     padding: 0.95rem 1rem;
+    transition:
+      background 0.2s ease,
+      border-color 0.2s ease,
+      transform 0.2s ease;
+  }
+  .option:hover {
+    transform: translateX(2px);
   }
   .option.selected {
-    background: rgba(102, 187, 106, 0.2);
+    background: #e8f5e9;
+    border-color: rgba(46, 125, 50, 0.5);
+    box-shadow: 0 8px 18px rgba(46, 125, 50, 0.12);
+  }
+  .option input {
+    accent-color: #2e7d32;
   }
   .score-card {
     align-items: center;
-    background: rgba(102, 187, 106, 0.12);
+    background:
+      linear-gradient(135deg, rgba(232, 245, 233, 0.96), rgba(255, 255, 255, 0.96)),
+      url('../img/quiz.png') right bottom / 110px no-repeat;
+    border: 1px solid rgba(69, 128, 81, 0.15);
     border-radius: 8px;
     display: flex;
     gap: 1.25rem;

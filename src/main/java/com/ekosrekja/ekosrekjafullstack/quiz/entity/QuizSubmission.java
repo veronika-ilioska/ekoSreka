@@ -1,5 +1,6 @@
 package com.ekosrekja.ekosrekjafullstack.quiz.entity;
 
+import com.ekosrekja.ekosrekjafullstack.user.entity.User;
 import jakarta.persistence.*;
 import java.time.Instant;
 import lombok.*;
@@ -15,6 +16,10 @@ public class QuizSubmission {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "quiz_id")
     private Quiz quiz;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
 
     private Instant createdAt = Instant.now();
     private Integer score;

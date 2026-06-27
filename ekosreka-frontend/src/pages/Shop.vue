@@ -2,44 +2,43 @@
   <section class="shop-page">
     <div class="shop-shell">
       <header class="shop-hero">
-        <div>
+        <div class="hero-copy">
           <p class="eyebrow">Еко продавница</p>
-          <h1>Корисни замени за почиста секојдневна рутина</h1>
+          <h1>Наскоро доаѓа</h1>
           <p>
-            Разгледај едноставни производи за повеќекратна употреба дома, на училиште и надвор.
-            Страницата е подготвена за вистинска наплата кога ќе пристигне API за производи.
+            Подготвуваме внимателно избрани еко производи за дом, училиште и активности надвор.
+            Продавницата сè уште не е отворена, но идејата расте.
           </p>
+          <div class="hero-actions">
+            <RouterLink class="btn hero-button" to="/news">Прочитај еко совети</RouterLink>
+            <RouterLink class="btn btn-outline-light" to="/quizzes">Реши квиз</RouterLink>
+          </div>
         </div>
-        <RouterLink class="btn hero-button" to="/news">Прочитај еко совети</RouterLink>
+
+        <div class="soon-card">
+          <span>Статус</span>
+          <strong>Coming soon</strong>
+          <p>Онлајн купување ќе биде достапно кога ќе ја завршиме селекцијата на производи.</p>
+        </div>
       </header>
 
-      <div class="shop-toolbar">
-        <div class="category-tabs" aria-label="Категории на производи">
-          <button
-            v-for="category in categories"
-            :key="category.value"
-            type="button"
-            :class="{ active: activeCategory === category.value }"
-            @click="activeCategory = category.value"
-          >
-            {{ category.label }}
-          </button>
-        </div>
-        <span>{{ filteredProducts.length }} производи</span>
-      </div>
+      <div class="preview-grid">
+        <article class="preview-card">
+          <span>01</span>
+          <h2>Производи за повеќекратна употреба</h2>
+          <p>Торби, шишиња и мали секојдневни замени што го намалуваат отпадот.</p>
+        </article>
 
-      <div class="product-grid">
-        <article v-for="product in filteredProducts" :key="product.id" class="product-card">
-          <img :src="product.image" :alt="product.name" />
-          <div class="product-body">
-            <div class="product-meta">
-              <span>{{ categoryLabel(product.category) }}</span>
-              <strong>{{ product.price }}</strong>
-            </div>
-            <h2>{{ product.name }}</h2>
-            <p>{{ product.description }}</p>
-            <button class="btn eco-btn" type="button">Додај во кошничка</button>
-          </div>
+        <article class="preview-card">
+          <span>02</span>
+          <h2>Еко сетови за учење</h2>
+          <p>Материјали и предизвици за ученици, семејства и клубови.</p>
+        </article>
+
+        <article class="preview-card">
+          <span>03</span>
+          <h2>Практични идеи за дома</h2>
+          <p>Едноставни алатки за поорганизирана, почиста и позелена рутина.</p>
         </article>
       </div>
     </div>
@@ -47,62 +46,7 @@
 </template>
 
 <script setup>
-  import { computed, ref } from 'vue';
   import { RouterLink } from 'vue-router';
-  import bagImage from '../img/bag.png';
-  import beforeImage from '../img/before1.jpg';
-  import afterImage from '../img/after1.jpg';
-  import gameImage from '../img/game.png';
-
-  const categories = [
-    { value: 'All', label: 'Сите' },
-    { value: 'Kitchen', label: 'Кујна' },
-    { value: 'Home', label: 'Дом' },
-    { value: 'Outdoor', label: 'Надвор' },
-    { value: 'Learning', label: 'Учење' },
-  ];
-  const activeCategory = ref('All');
-  const products = [
-    {
-      id: 1,
-      name: 'Торба за повеќекратна употреба',
-      category: 'Kitchen',
-      price: '$8',
-      image: bagImage,
-      description: 'Цврста секојдневна торба за намирници, книги и кратки обврски.',
-    },
-    {
-      id: 2,
-      name: 'Почетен сет за компост',
-      category: 'Home',
-      price: '$18',
-      image: beforeImage,
-      description: 'Сет погоден за почетници за собирање остатоци од храна и градинарски отпад.',
-    },
-    {
-      id: 3,
-      name: 'Ракавици за чистење',
-      category: 'Outdoor',
-      price: '$12',
-      image: afterImage,
-      description: 'Ракавици за повеќекратна употреба за локални чистења и активности надвор.',
-    },
-    {
-      id: 4,
-      name: 'Еко картички со предизвици',
-      category: 'Learning',
-      price: '$10',
-      image: gameImage,
-      description: 'Мали неделни предизвици за семејства, училници и клубови.',
-    },
-  ];
-  const filteredProducts = computed(() =>
-    activeCategory.value === 'All' ? products : products.filter((product) => product.category === activeCategory.value)
-  );
-
-  function categoryLabel(value) {
-    return categories.find((category) => category.value === value)?.label || value;
-  }
 </script>
 
 <style scoped>
@@ -110,75 +54,138 @@
     color: var(--eco-text-dark);
     padding: 1rem 0 4rem;
   }
+
   .shop-shell {
     margin: 0 auto;
     max-width: 1120px;
   }
+
   .shop-hero {
-    background: linear-gradient(135deg, rgba(69, 128, 81, 0.94), rgba(102, 187, 106, 0.84)), url('../img/bag.png') center / cover;
+    align-items: end;
+    background:
+      linear-gradient(135deg, rgba(27, 77, 43, 0.94), rgba(46, 125, 50, 0.82)),
+      url('../img/guide.svg') right 2rem center / 180px no-repeat;
     border-radius: 8px;
     color: #fff;
     display: grid;
     gap: 1.5rem;
-    grid-template-columns: minmax(0, 1fr) auto;
-    margin-bottom: 1.25rem;
-    min-height: 300px;
-    padding: 2rem;
+    grid-template-columns: minmax(0, 1fr) 280px;
+    margin-bottom: 1.5rem;
+    min-height: 260px;
+    padding: clamp(1.5rem, 4vw, 2.5rem);
   }
-  .shop-toolbar {
-    align-items: center;
-    display: flex;
-    gap: 1rem;
-    justify-content: space-between;
-    margin-bottom: 1rem;
+
+  .hero-copy {
+    max-width: 680px;
   }
-  .category-tabs {
+
+  .eyebrow {
+    font-size: 0.78rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    margin: 0 0 0.75rem;
+    text-transform: uppercase;
+  }
+
+  .shop-hero h1 {
+    font-size: clamp(2.2rem, 6vw, 4.6rem);
+    font-weight: 900;
+    letter-spacing: 0;
+    line-height: 0.98;
+    margin: 0 0 1rem;
+  }
+
+  .shop-hero p {
+    font-size: 1rem;
+    line-height: 1.7;
+    margin: 0;
+    opacity: 0.92;
+  }
+
+  .hero-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
   }
-  .category-tabs button {
-    background: var(--eco-card-bg);
-    border: 1px solid rgba(69, 128, 81, 0.25);
-    border-radius: 999px;
-    color: #2e7d32;
-    font-weight: 800;
-    padding: 0.6rem 0.95rem;
+
+  .hero-button {
+    background: #fff;
+    border: none;
+    color: #24552d;
+    font-weight: 900;
   }
-  .category-tabs button.active {
-    background: #458051;
-    color: #fff;
-  }
-  .product-grid {
-    display: grid;
-    gap: 1rem;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-  .product-card {
-    background: var(--eco-card-bg);
+
+  .hero-actions .btn {
+    min-height: 44px;
+   }
+
+  .soon-card {
+    background: rgba(255, 255, 255, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.28);
     border-radius: 8px;
-    overflow: hidden;
-  }
-  .product-card img {
-    aspect-ratio: 4 / 3;
-    object-fit: cover;
-    width: 100%;
-  }
-  .product-body {
     display: grid;
     gap: 0.65rem;
     padding: 1rem;
   }
-  .product-meta {
-    display: flex;
-    font-weight: 800;
-    justify-content: space-between;
+
+  .soon-card span,
+  .preview-card span {
+    color: rgba(255, 255, 255, 0.76);
+    font-size: 0.76rem;
+    font-weight: 900;
     text-transform: uppercase;
   }
+
+  .soon-card strong {
+    font-size: 1.7rem;
+    font-weight: 900;
+    line-height: 1;
+  }
+
+  .preview-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .preview-card {
+    background: var(--eco-card-bg);
+    border: 1px solid rgba(69, 128, 81, 0.15);
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(27, 42, 27, 0.08);
+    display: grid;
+    gap: 0.65rem;
+    padding: 1.5rem;
+  }
+
+  .preview-card span {
+    color: #2e7d32;
+  }
+
+  .preview-card h2 {
+    color: #1b2a1b;
+    font-size: 1.2rem;
+    font-weight: 900;
+    margin: 0;
+  }
+
+  .preview-card p {
+    color: #506650;
+    line-height: 1.6;
+    margin: 0;
+  }
+
   @media (max-width: 991px) {
     .shop-hero,
-    .product-grid {
+    .preview-grid {
       grid-template-columns: 1fr;
+    }
+
+    .shop-hero {
+      background:
+        linear-gradient(135deg, rgba(27, 77, 43, 0.94), rgba(46, 125, 50, 0.84)),
+        url('../img/guide.svg') right 1rem bottom 1rem / 120px no-repeat;
     }
   }
 </style>

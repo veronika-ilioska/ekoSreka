@@ -41,6 +41,7 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(signupRequest.getPassword()));
         user.setFirstName(signupRequest.getFirstName());
         user.setLastName(signupRequest.getLastName());
+        user.setIsAdmin(false);
 
         User savedUser = userRepository.save(user);
 

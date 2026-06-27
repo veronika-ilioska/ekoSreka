@@ -9,6 +9,7 @@ export const useAuthStore = defineStore('auth', () => {
   const error = ref(null);
 
   const isAuthenticated = computed(() => !!userId.value);
+  const isAdmin = computed(() => Boolean(user.value?.isAdmin));
   const userName = computed(() => {
     if (user.value?.username) return user.value.username;
     if (user.value?.firstName) return user.value.firstName;
@@ -71,6 +72,7 @@ export const useAuthStore = defineStore('auth', () => {
     loading,
     error,
     isAuthenticated,
+    isAdmin,
     userName,
     login,
     signup,

@@ -59,7 +59,7 @@
                     <i class="bi bi-gear me-2"></i>Поставки
                   </RouterLink>
                 </li>
-                <li>
+                <li v-if="authStore.isAdmin">
                   <RouterLink class="dropdown-item" to="/admin">
                     <i class="bi bi-shield-check me-2"></i>Админ
                   </RouterLink>

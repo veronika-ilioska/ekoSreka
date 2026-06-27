@@ -22,6 +22,7 @@ public class Video {
     private String description;
 
     private String source;
+    private String icon;
     private String ref;
 
     private Integer durationSec;

@@ -139,70 +139,98 @@
 <style scoped>
   .eco-section {
     color: #1b2a1b;
-    padding: clamp(24px, 3vw, 40px) 0;
+    padding: 1rem 0 4rem;
   }
 
   .container {
-    max-width: 1040px;
+    max-width: 1120px;
     margin: 0 auto;
     padding: 0 16px;
   }
 
   .hor-hero {
     align-items: end;
-    background: linear-gradient(135deg, #244d2b 0%, #66bb6a 100%);
+    background:
+      radial-gradient(circle at 78% 28%, rgba(255, 255, 255, 0.24) 0 2px, transparent 3px),
+      radial-gradient(circle at 88% 68%, rgba(255, 255, 255, 0.2) 0 2px, transparent 3px),
+      linear-gradient(115deg, #14291b 0%, #24552d 58%, #5f8f58 100%);
     border-radius: 8px;
     color: #fff;
     display: grid;
     gap: 1.5rem;
-    grid-template-columns: minmax(0, 1fr) 160px;
+    grid-template-columns: minmax(0, 1fr) 220px;
+    isolation: isolate;
     margin-bottom: 1.25rem;
-    padding: clamp(1.5rem, 4vw, 2.25rem);
+    min-height: 260px;
+    overflow: hidden;
+    padding: clamp(1.5rem, 4vw, 2.5rem);
+    position: relative;
+  }
+
+  .hor-hero::after {
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 50%;
+    color: rgba(255, 255, 255, 0.24);
+    content: '✦';
+    display: grid;
+    font-size: 6rem;
+    height: 170px;
+    place-items: center;
+    position: absolute;
+    right: 300px;
+    top: -44px;
+    width: 170px;
+    z-index: -1;
   }
 
   .eyebrow {
     font-size: 0.78rem;
-    font-weight: 800;
+    font-weight: 900;
     letter-spacing: 0.08em;
     margin: 0 0 0.55rem;
     text-transform: uppercase;
   }
 
   .hor-hero h1 {
-    font-size: clamp(2rem, 5vw, 3.8rem);
-    font-weight: 800;
-    line-height: 1.05;
+    font-size: clamp(2.2rem, 6vw, 4.4rem);
+    font-weight: 900;
+    letter-spacing: 0;
+    line-height: 0.98;
     margin: 0 0 0.75rem;
   }
 
   .hor-hero p {
+    line-height: 1.7;
     margin: 0;
     max-width: 640px;
     opacity: 0.92;
   }
 
   .hero-count {
-    background: rgba(255, 255, 255, 0.16);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.5);
     border-radius: 8px;
+    color: #1b2a1b;
     padding: 1rem;
   }
 
   .hero-count strong {
     display: block;
-    font-size: 2.4rem;
+    font-size: 3rem;
+    font-weight: 900;
     line-height: 1;
   }
 
   .hero-count span {
+    color: #2e7d32;
     font-size: 0.8rem;
-    font-weight: 800;
+    font-weight: 900;
     text-transform: uppercase;
   }
 
   .grid {
     display: grid;
-    gap: 1rem;
+    gap: 1.25rem;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -210,11 +238,28 @@
     background: #fff;
     border: 1px solid rgba(69, 128, 81, 0.14);
     border-radius: 8px;
-    box-shadow: 0 8px 24px rgba(27, 42, 27, 0.08);
+    border-top: 5px solid #2e7d32;
+    box-shadow: 0 10px 30px rgba(27, 42, 27, 0.08);
     color: #1b2a1b;
     display: grid;
     gap: 0.85rem;
     padding: 1rem;
+    position: relative;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+  }
+
+  .card:hover {
+    border-color: rgba(69, 128, 81, 0.34);
+    transform: translateY(-2px);
+  }
+
+  .card::after {
+    color: rgba(46, 125, 50, 0.12);
+    content: '✦';
+    font-size: 2.4rem;
+    position: absolute;
+    right: 1rem;
+    top: 0.8rem;
   }
 
   .meta-top {
@@ -225,10 +270,10 @@
 
   .chip {
     background: #eaf6ea;
-    border-radius: 999px;
+    border-radius: 8px;
     color: #24552d;
     font-size: 0.78rem;
-    font-weight: 800;
+    font-weight: 900;
     padding: 0.35rem 0.7rem;
   }
 
@@ -240,7 +285,7 @@
   .title {
     color: #1b2a1b;
     font-size: 1.25rem;
-    font-weight: 800;
+    font-weight: 900;
     margin: 0;
   }
 
@@ -251,7 +296,7 @@
   }
 
   .eco-tip {
-    background: #f0fdf4;
+    background: #f7fbf4;
     border: 1px solid #bbf7d0;
     border-radius: 8px;
     color: #166534;
@@ -303,6 +348,10 @@
     .hor-hero,
     .grid {
       grid-template-columns: 1fr;
+    }
+
+    .hor-hero::after {
+      display: none;
     }
   }
 </style>

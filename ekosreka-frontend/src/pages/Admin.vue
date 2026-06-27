@@ -87,6 +87,34 @@
               </div>
             </div>
 
+            <section class="import-panel">
+              <div class="import-heading">
+                <div>
+                  <h3>Увези прашања</h3>
+                  <p>Залепи JSON, CSV, TSV или текст блокови.</p>
+                </div>
+                <label class="btn btn-outline-success import-file-button">
+                  Избери датотека
+                  <input type="file" accept=".csv,.json,.txt,.tsv" @change="handleImportFile" />
+                </label>
+              </div>
+              <textarea
+                v-model="importText"
+                class="form-control import-textarea"
+                rows="8"
+                placeholder="Прашање | Точен одговор | Погрешен одговор | Погрешен одговор&#10;&#10;Текст на прашање&#10;* Точен одговор&#10;Погрешен одговор&#10;Погрешен одговор"
+              />
+              <div v-if="importError" class="alert alert-danger">{{ importError }}</div>
+              <div class="form-actions import-actions">
+                <button class="btn btn-outline-success" type="button" @click="importQuestions">
+                  Увези во квизот
+                </button>
+                <button class="btn btn-outline-secondary" type="button" @click="clearImport">
+                  Исчисти увоз
+                </button>
+              </div>
+            </section>
+
             <div class="builder-heading">
               <h3>Прашања</h3>
               <button class="btn btn-outline-success" type="button" @click="addQuestion">Додај прашање</button>
@@ -198,6 +226,7 @@
       fields: [
         { name: 'title', label: 'Наслов', type: 'text', required: true },
         { name: 'source', label: 'Извор', type: 'text', required: true },
+        { name: 'icon', label: 'Икона', type: 'text' },
         { name: 'ref', label: 'Видео референца или URL', type: 'text', required: true },
         { name: 'durationSec', label: 'Времетраење во секунди', type: 'number' },
         { name: 'description', label: 'Опис', type: 'textarea' },
@@ -239,6 +268,8 @@
   const saving = ref(false);
   const pageError = ref('');
   const successMessage = ref('');
+  const importText = ref('');
+  const importError = ref('');
   const form = reactive({});
   const quizQuestions = ref([]);
   const currentSection = computed(() => sections.find((section) => section.key === activeSection.value));
@@ -251,6 +282,8 @@
       form.level = '';
       form.timeMinutes = 5;
       form.description = '';
+      importText.value = '';
+      importError.value = '';
       quizQuestions.value = [newQuestion()];
       return;
     }
@@ -316,6 +349,174 @@
       option.correct = index === optionIndex;
     });
   }
+  function clearImport() {
+    importText.value = '';
+    importError.value = '';
+  }
+  function handleImportFile(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      importText.value = String(reader.result || '');
+      importError.value = '';
+    };
+    reader.onerror = () => {
+      importError.value = 'Could not read the selected file.';
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+  }
+  function importQuestions() {
+    importError.value = '';
+    try {
+      const imported = parseImportedQuestions(importText.value);
+      if (imported.length === 0) {
+        importError.value = 'No valid questions were found.';
+        return;
+      }
+      quizQuestions.value = imported;
+      successMessage.value = `${imported.length} question${imported.length === 1 ? '' : 's'} imported into the quiz builder.`;
+    } catch (error) {
+      importError.value = error.message || 'Questions could not be imported.';
+    }
+  }
+  function parseImportedQuestions(raw) {
+    const text = raw.trim();
+    if (!text) return [];
+
+    if (text.startsWith('[') || text.startsWith('{')) {
+      return parseJsonQuestions(text);
+    }
+
+    const nonEmptyLines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+    const delimiter = detectDelimiter(nonEmptyLines);
+    if (delimiter) {
+      return parseDelimitedQuestions(nonEmptyLines, delimiter);
+    }
+
+    return parseTextBlockQuestions(text);
+  }
+  function parseJsonQuestions(text) {
+    const parsed = JSON.parse(text);
+    const items = Array.isArray(parsed) ? parsed : parsed.questions;
+    if (!Array.isArray(items)) {
+      throw new Error('JSON must be an array or an object with a questions array.');
+    }
+
+    return items.map((item, index) => {
+      const questionText = item.text || item.question || item.title;
+      const rawOptions = item.options || item.answers;
+      if (!questionText || !Array.isArray(rawOptions)) {
+        throw new Error(`Question ${index + 1} is missing text or answers.`);
+      }
+
+      const options = rawOptions.map((option) => {
+        if (typeof option === 'string') {
+          return importedOption(option, false);
+        }
+        return importedOption(option.text || option.answer || option.label, Boolean(option.correct || option.isCorrect));
+      });
+
+      if (!options.some((option) => option.correct) && item.correctAnswer) {
+        const correctIndex = options.findIndex((option) => option.text === item.correctAnswer);
+        if (correctIndex >= 0) options[correctIndex].correct = true;
+      }
+
+      return normalizeImportedQuestion(questionText, options, index);
+    });
+  }
+  function parseDelimitedQuestions(lines, delimiter) {
+    const rows = lines.map((line) => splitDelimitedLine(line, delimiter)).filter((row) => row.length >= 3);
+    if (rows.length && /^question$/i.test(rows[0][0].trim())) {
+      rows.shift();
+    }
+
+    return rows.map((row, index) => {
+      const [questionText, correctAnswer, ...wrongAnswers] = row.map((cell) => cell.trim()).filter(Boolean);
+      const options = [
+        importedOption(correctAnswer, true),
+        ...wrongAnswers.map((answer) => importedOption(answer, false)),
+      ];
+      return normalizeImportedQuestion(questionText, options, index);
+    });
+  }
+  function parseTextBlockQuestions(text) {
+    return text.split(/\n\s*\n/).map((block, index) => {
+      const lines = block.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+      const [questionText, ...answerLines] = lines;
+      const options = answerLines.map((line) => {
+        const marked = isCorrectAnswerLine(line);
+        return importedOption(cleanAnswerLine(line), marked);
+      });
+      if (!options.some((option) => option.correct) && options.length) {
+        options[0].correct = true;
+      }
+      return normalizeImportedQuestion(questionText, options, index);
+    });
+  }
+  function detectDelimiter(lines) {
+    const sample = lines.slice(0, 3);
+    if (sample.some((line) => splitDelimitedLine(line, '|').length >= 3)) return '|';
+    if (sample.some((line) => splitDelimitedLine(line, '\t').length >= 3)) return '\t';
+    if (sample.some((line) => splitDelimitedLine(line, ',').length >= 3)) return ',';
+    return '';
+  }
+  function splitDelimitedLine(line, delimiter) {
+    if (delimiter === '\t') return line.split('\t');
+
+    const values = [];
+    let current = '';
+    let quoted = false;
+    for (const char of line) {
+      if (char === '"') {
+        quoted = !quoted;
+      } else if (char === delimiter && !quoted) {
+        values.push(current);
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    values.push(current);
+    return values;
+  }
+  function isCorrectAnswerLine(line) {
+    return /^(\*|\+|\[x\]|\(x\)|correct:)/i.test(line) || /\(correct\)$/i.test(line);
+  }
+  function cleanAnswerLine(line) {
+    return line
+      .replace(/^(\*|\+|\[x\]|\(x\)|correct:)\s*/i, '')
+      .replace(/\s*\(correct\)$/i, '')
+      .trim();
+  }
+  function importedOption(text, correct) {
+    return {
+      uid: crypto.randomUUID(),
+      text: String(text || '').trim(),
+      correct,
+    };
+  }
+  function normalizeImportedQuestion(questionText, options, index) {
+    const cleanOptions = options.filter((option) => option.text);
+    if (!questionText || cleanOptions.length < 2) {
+      throw new Error(`Question ${index + 1} needs text and at least two answers.`);
+    }
+    if (!cleanOptions.some((option) => option.correct)) {
+      cleanOptions[0].correct = true;
+    }
+    const firstCorrect = cleanOptions.findIndex((option) => option.correct);
+    cleanOptions.forEach((option, optionIndex) => {
+      option.correct = optionIndex === firstCorrect;
+    });
+
+    return {
+      uid: crypto.randomUUID(),
+      text: String(questionText).trim(),
+      options: cleanOptions,
+    };
+  }
   async function loadItems() {
     loading.value = true;
     pageError.value = '';
@@ -357,7 +558,7 @@
     }
   }
   onMounted(() => {
-    if (!authStore.isAuthenticated) {
+    if (!authStore.isAuthenticated || !authStore.isAdmin) {
       router.push('/login');
       return;
     }
@@ -376,22 +577,53 @@
     max-width: 1200px;
   }
   .admin-hero {
-    background: linear-gradient(135deg, #244d2b 0%, #458051 100%);
+    background:
+      linear-gradient(135deg, rgba(27, 77, 43, 0.94), rgba(46, 125, 50, 0.82)),
+      url('../img/guide.svg') right 2rem center / 180px no-repeat;
     border-radius: 8px;
     color: #fff;
     margin-bottom: 1.5rem;
-    padding: 2rem;
+    min-height: 260px;
+    padding: clamp(1.5rem, 4vw, 2.5rem);
+  }
+  .admin-hero .eyebrow {
+    font-size: 0.78rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    margin: 0 0 0.75rem;
+    text-transform: uppercase;
+  }
+  .admin-hero h1 {
+    font-size: clamp(2.2rem, 6vw, 4.4rem);
+    font-weight: 900;
+    letter-spacing: 0;
+    line-height: 0.98;
+    margin: 0 0 1rem;
+    max-width: 760px;
+  }
+  .admin-hero p:last-child {
+    font-size: 1rem;
+    line-height: 1.7;
+    margin: 0;
+    max-width: 640px;
+    opacity: 0.92;
   }
   .admin-layout {
+    align-items: start;
     display: grid;
     gap: 1.25rem;
-    grid-template-columns: 280px minmax(0, 1fr);
+    grid-template-columns: 220px minmax(0, 1fr);
   }
   .admin-tabs,
   .items-list,
   .quiz-builder {
     display: grid;
     gap: 0.75rem;
+  }
+  .admin-tabs {
+    align-self: start;
+    position: sticky;
+    top: 5.5rem;
   }
   .admin-tabs button,
   .admin-panel,
@@ -401,15 +633,77 @@
     background: var(--eco-card-bg);
     border: 1px solid rgba(69, 128, 81, 0.15);
     border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(27, 42, 27, 0.08);
     padding: 1rem;
   }
   .admin-tabs button {
     display: grid;
+    gap: 0.25rem;
+    min-height: 0;
+    padding: 0.85rem;
     text-align: left;
+    transition:
+      background 0.2s ease,
+      color 0.2s ease,
+      transform 0.2s ease;
   }
   .admin-tabs button.active {
-    background: #458051;
+    background: #2e7d32;
     color: #fff;
+  }
+  .admin-tabs button:hover {
+    transform: translateY(-1px);
+  }
+  .admin-tabs button span {
+    color: #506650;
+    font-size: 0.8rem;
+    line-height: 1.45;
+  }
+  .admin-tabs button.active span {
+    color: rgba(255, 255, 255, 0.82);
+  }
+  .import-panel {
+    background: rgba(102, 187, 106, 0.07);
+    border: 1px solid rgba(69, 128, 81, 0.15);
+    border-radius: 8px;
+    display: grid;
+    gap: 0.9rem;
+    margin-bottom: 1.25rem;
+    padding: 1rem;
+  }
+  .import-heading {
+    align-items: center;
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+  }
+  .import-heading h3,
+  .import-heading p {
+    margin: 0;
+  }
+  .import-heading h3,
+  .builder-heading h3,
+  .panel-heading h2 {
+    color: #1b2a1b;
+    font-size: 1.35rem;
+    font-weight: 900;
+  }
+  .import-heading p {
+    color: #506650;
+  }
+  .import-file-button input {
+    display: none;
+  }
+  .import-textarea {
+    font-family: Consolas, 'Courier New', monospace;
+    min-height: 180px;
+  }
+  .import-actions {
+    margin-top: 0;
+  }
+  .admin-panel {
+    display: grid;
+    gap: 1.25rem;
   }
   .panel-heading,
   .form-actions,
@@ -420,6 +714,15 @@
     gap: 1rem;
     justify-content: space-between;
   }
+  .panel-heading {
+    align-items: start;
+    border-bottom: 1px solid rgba(69, 128, 81, 0.14);
+    padding-bottom: 1rem;
+  }
+  .panel-heading p {
+    color: #506650;
+    margin: 0;
+  }
   .content-form {
     display: grid;
     gap: 1rem;
@@ -428,8 +731,30 @@
   }
   .field,
   .option-editor {
+    background: rgba(102, 187, 106, 0.07);
+    border: 1px solid rgba(69, 128, 81, 0.14);
+    border-radius: 8px;
     display: grid;
     gap: 0.45rem;
+    padding: 1rem;
+  }
+  .field label,
+  .option-editor span:first-child {
+    color: #24552d;
+    font-size: 0.82rem;
+    font-weight: 900;
+    text-transform: uppercase;
+  }
+  .form-control,
+  .form-select {
+    border: 1px solid #d7e6d8;
+    border-radius: 8px;
+    min-height: 44px;
+  }
+  .form-control:focus,
+  .form-select:focus {
+    border-color: #66bb6a;
+    box-shadow: 0 0 0 3px rgba(102, 187, 106, 0.2);
   }
   .field.wide,
   .form-actions {
@@ -440,11 +765,41 @@
     gap: 0.75rem;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .item-row {
+    align-items: center;
+  }
+  .item-row h3 {
+    color: #1b2a1b;
+    font-size: 1.05rem;
+    font-weight: 900;
+    margin: 0 0 0.25rem;
+  }
+  .item-row p,
+  .empty-state {
+    color: #506650;
+  }
   @media (max-width: 991px) {
     .admin-layout,
     .content-form,
     .option-grid {
       grid-template-columns: 1fr;
+    }
+    .import-heading {
+      align-items: stretch;
+      flex-direction: column;
+    }
+    .admin-hero {
+      background:
+        linear-gradient(135deg, rgba(27, 77, 43, 0.94), rgba(46, 125, 50, 0.84)),
+        url('../img/guide.svg') right 1rem bottom 1rem / 120px no-repeat;
+    }
+    .panel-heading,
+    .form-actions,
+    .builder-heading,
+    .question-editor-top,
+    .item-row {
+      align-items: stretch;
+      flex-direction: column;
     }
   }
 </style>

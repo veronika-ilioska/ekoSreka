@@ -27,13 +27,14 @@
   import { onMounted, reactive } from 'vue';
   import { api } from '../api';
 
-  const counts = reactive({ photos: 0, videos: 0, horoscope: 0, games: 0 });
+  const counts = reactive({ photos: 0, videos: 0, horoscope: 0, games: 0, quizzes: 0 });
 
   const endpoints = {
     photos: '/media/photos/count',
     videos: '/media/videos/count',
     horoscope: '/horoscope/count',
     games: '/games/count',
+    quizzes: '/quizzes?size=1',
   };
 
   const icons = {
@@ -45,6 +46,8 @@
       '<svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm1 5v4h4v2h-4v4h-2v-4H7v-2h4V7h2Z"/></svg>',
     games:
       '<svg viewBox="0 0 24 24"><path d="M7 9h10a5 5 0 0 1 3.8 8.3 3.2 3.2 0 0 1-4.5.3L14.8 16H9.2l-1.5 1.6a3.2 3.2 0 0 1-4.5-.3A5 5 0 0 1 7 9Zm1 3v2h2v-2H8Zm1-1h2v-2H9v2Zm8.5.2a1.1 1.1 0 1 0 0 2.2 1.1 1.1 0 0 0 0-2.2Z"/></svg>',
+    quizzes:
+      '<svg viewBox="0 0 24 24"><path d="M7 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm2 4v2h6V7H9Zm0 4v2h6v-2H9Zm0 4v2h4v-2H9Z"/></svg>',
   };
 
   const sections = [
@@ -76,12 +79,19 @@
       description: 'Мини-игри и предизвици за учење преку игра.',
       icon: icons.games,
     },
+    {
+      key: 'quizzes',
+      to: '/quizzes',
+      title: 'Квизови',
+      description: 'Провери го твоето еко знаење и следи ги резултатите.',
+      icon: icons.quizzes,
+    },
   ];
 
   async function fetchCount(key) {
     try {
       const { data } = await api.get(endpoints[key]);
-      const value = typeof data === 'number' ? data : Number(data?.count ?? data?.total ?? 0);
+      const value = typeof data === 'number' ? data : Number(data?.count ?? data?.totalElements ?? data?.total ?? 0);
       counts[key] = Number.isFinite(value) ? value : 0;
     } catch {
       counts[key] = 0;

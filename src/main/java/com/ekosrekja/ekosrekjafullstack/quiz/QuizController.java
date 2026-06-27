@@ -8,6 +8,7 @@ import com.ekosrekja.ekosrekjafullstack.quiz.repo.QuizOptionRepository;
 import com.ekosrekja.ekosrekjafullstack.quiz.repo.QuizQuestionRepository;
 import com.ekosrekja.ekosrekjafullstack.quiz.repo.QuizRepository;
 import com.ekosrekja.ekosrekjafullstack.quiz.repo.QuizSubmissionRepository;
+import com.ekosrekja.ekosrekjafullstack.user.repository.UserRepository;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +30,7 @@ public class QuizController {
     private final QuizQuestionRepository qqRepo;
     private final QuizOptionRepository qoRepo;
     private final QuizSubmissionRepository subRepo;
+    private final UserRepository userRepo;
 
     @GetMapping
     public Page<dto.QuizListItem> list(
@@ -47,6 +49,20 @@ public class QuizController {
                                 q.getLevel(),
                                 q.getDescription(),
                                 q.getTimeMinutes()));
+    }
+
+    @GetMapping("/me/history")
+    public List<dto.QuizHistoryItem> myHistory(@RequestHeader("X-User-Id") Long userId) {
+        userRepo.findById(userId).orElseThrow();
+        return subRepo.findByUserIdOrderByCreatedAtDesc(userId).stream()
+                .map(sub -> new dto.QuizHistoryItem(
+                        sub.getId(),
+                        sub.getQuiz().getId(),
+                        sub.getQuiz().getTitle(),
+                        sub.getScore(),
+                        sub.getTotal(),
+                        sub.getCreatedAt()))
+                .toList();
     }
 
     @GetMapping("/{id}")
@@ -87,7 +103,10 @@ public class QuizController {
     public record AnswerIn(Long questionId, Long optionId) {}
 
     @PostMapping("/{id}/submit") // id to na kvizot i odgovorite
-    public dto.QuizResultDto submit(@PathVariable Long id, @RequestBody List<AnswerIn> answers) {
+    public dto.QuizResultDto submit(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-User-Id", required = false) Long userId,
+            @RequestBody List<AnswerIn> answers) {
 
         List<QuizQuestion> questions =
                 qqRepo.findByQuizIdOrderByIdAsc(id); // koj kviz(gi zemame negovite prashanja)
@@ -128,6 +147,9 @@ public class QuizController {
         Quiz quiz = quizRepo.findById(id).orElseThrow();
         QuizSubmission sub = new QuizSubmission();
         sub.setQuiz(quiz);
+        if (userId != null) {
+            userRepo.findById(userId).ifPresent(sub::setUser);
+        }
         sub.setScore(score);
         sub.setTotal(questions.size());
         subRepo.save(sub);

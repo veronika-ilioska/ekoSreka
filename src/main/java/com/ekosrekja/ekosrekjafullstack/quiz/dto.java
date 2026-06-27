@@ -1,5 +1,6 @@
 package com.ekosrekja.ekosrekjafullstack.quiz;
 
+import java.time.Instant;
 import java.util.List;
 
 public class dto {
@@ -15,6 +16,14 @@ public class dto {
         public record QuestionResult(
                 Long questionId, Long chosenOptionId, Long correctOptionId, boolean correct) {}
     }
+
+    public record QuizHistoryItem(
+            Long id,
+            Long quizId,
+            String quizTitle,
+            Integer score,
+            Integer total,
+            Instant createdAt) {}
 }
 
 
