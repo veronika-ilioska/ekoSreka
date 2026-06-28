@@ -97,7 +97,10 @@
 
         <aside class="settings-stack">
           <article class="settings-panel account-card">
-            <div class="account-avatar" aria-hidden="true">{{ initials }}</div>
+            <div class="account-avatar" :class="{ 'has-image': profilePictureUrl }" aria-hidden="true">
+              <img v-if="profilePictureUrl" :src="profilePictureUrl" :alt="displayName" />
+              <span v-else>{{ initials }}</span>
+            </div>
             <h2>Профил</h2>
             <div class="account-row">
               <span>Име</span>
@@ -169,6 +172,7 @@
       .join('')
       .toUpperCase()
   );
+  const profilePictureUrl = computed(() => authStore.user?.profilePictureUrl || '');
 
   function applySettings() {
     document.documentElement.dataset.contentDensity = settings.contentDensity;
@@ -487,6 +491,13 @@
     background: #2e7d32;
     color: #fff;
     font-size: 1rem;
+    overflow: hidden;
+  }
+
+  .account-avatar img {
+    height: 100%;
+    object-fit: cover;
+    width: 100%;
   }
 
   .account-row {

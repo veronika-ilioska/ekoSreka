@@ -18,6 +18,8 @@ public class Quiz {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    private String imageUrl;
+
     private Integer timeMinutes = 5;
     private boolean active = true;
 }

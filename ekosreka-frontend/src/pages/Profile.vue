@@ -2,15 +2,24 @@
   <section class="profile-page">
     <div class="profile-shell">
       <header class="profile-hero">
-        <div class="avatar" aria-hidden="true">{{ initials }}</div>
+        <div class="avatar" :class="{ 'has-image': profilePictureUrl }" aria-hidden="true">
+          <img v-if="profilePictureUrl" :src="profilePictureUrl" :alt="displayName" />
+          <span v-else>{{ initials }}</span>
+        </div>
         <div class="hero-copy">
           <p class="eyebrow">Мој профил</p>
           <h1>{{ displayName }}</h1>
           <p>{{ user?.email || 'Одржувај ги податоците на профилот ажурирани.' }}</p>
         </div>
-        <button v-if="!isEditing" class="btn eco-btn edit-button" type="button" @click="startEditing">
-          Уреди
-        </button>
+        <div class="hero-actions">
+          <label class="btn avatar-upload-button" :class="{ disabled: isUploadingPicture }">
+            {{ isUploadingPicture ? 'Се прикачува...' : 'Прикачи слика' }}
+            <input type="file" accept="image/*" :disabled="isUploadingPicture" @change="uploadProfilePicture" />
+          </label>
+          <button v-if="!isEditing" class="btn eco-btn edit-button" type="button" @click="startEditing">
+            Уреди
+          </button>
+        </div>
       </header>
 
       <div v-if="successMessage" class="alert alert-success">{{ successMessage }}</div>
@@ -159,6 +168,7 @@
   const isEditing = ref(false);
   const isSaving = ref(false);
   const isChangingPassword = ref(false);
+  const isUploadingPicture = ref(false);
   const pageError = ref('');
   const formError = ref('');
   const passwordError = ref('');
@@ -167,6 +177,7 @@
   const historyLoading = ref(false);
   const form = reactive({ firstName: '', lastName: '', email: '' });
   const passwordForm = reactive({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const profilePictureUrl = computed(() => user.value?.profilePictureUrl || '');
 
   const displayName = computed(() => {
     const fullName = [user.value?.firstName?.trim(), user.value?.lastName?.trim()].filter(Boolean).join(' ');
@@ -280,6 +291,28 @@
       formError.value = error.response?.data?.message || 'Профилот не може да се ажурира.';
     } finally {
       isSaving.value = false;
+    }
+  }
+
+  async function uploadProfilePicture(event) {
+    if (!requireLogin()) return;
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    pageError.value = '';
+    successMessage.value = '';
+    isUploadingPicture.value = true;
+    try {
+      const payload = new FormData();
+      payload.append('file', file);
+      const { data } = await api.post(`/profile/${authStore.userId}/picture`, payload);
+      authStore.updateUser(data);
+      successMessage.value = 'Профилната слика е успешно ажурирана.';
+    } catch (error) {
+      pageError.value = error.response?.data?.message || 'Профилната слика не може да се прикачи.';
+    } finally {
+      isUploadingPicture.value = false;
     }
   }
 
@@ -401,6 +434,45 @@
     font-weight: 900;
     justify-content: center;
     width: 96px;
+  }
+
+  .avatar.has-image {
+    overflow: hidden;
+    padding: 0;
+  }
+
+  .avatar img {
+    height: 100%;
+    object-fit: cover;
+    width: 100%;
+  }
+
+  .hero-actions {
+    align-items: stretch;
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .avatar-upload-button {
+    background: rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.34);
+    color: #fff;
+    font-weight: 900;
+    min-height: 44px;
+  }
+
+  .avatar-upload-button:hover {
+    background: rgba(255, 255, 255, 0.24);
+    color: #fff;
+  }
+
+  .avatar-upload-button.disabled {
+    opacity: 0.72;
+    pointer-events: none;
+  }
+
+  .avatar-upload-button input {
+    display: none;
   }
 
   .edit-button {

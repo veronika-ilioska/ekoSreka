@@ -34,7 +34,8 @@
       <div v-else-if="items.length" class="grid">
         <article v-for="video in items" :key="video.id" class="card">
           <div class="thumb-wrap thumb-wrap--video">
-            <img :src="thumbnail(video)" :alt="video.title" class="thumb" loading="lazy" />
+            <video v-if="isUploadedVideo(video)" :src="video.ref" class="thumb" muted preload="metadata"></video>
+            <img v-else :src="thumbnail(video)" :alt="video.title" class="thumb" loading="lazy" />
             <span class="video-icon">{{ videoIcon(video) }}</span>
           </div>
           <div class="meta-top">
@@ -125,6 +126,10 @@
       return `https://img.youtube.com/vi/${video.ref}/hqdefault.jpg`;
     }
     return video.thumbnailUrl || 'https://placehold.co/600x400?text=Video';
+  }
+
+  function isUploadedVideo(video) {
+    return (video.source || '').toUpperCase() === 'UPLOAD' && Boolean(video.ref);
   }
 
   function videoIcon(video) {

@@ -51,10 +51,7 @@
   import { computed, onMounted, ref } from 'vue';
   import { RouterLink } from 'vue-router';
   import { api } from '../api';
-  import beforeImage from '../img/before1.jpg';
-  import afterImage from '../img/after1.jpg';
-  import gameImage from '../img/game.png';
-  import quizImage from '../img/quiz.png';
+  import defaultQuizImage from '../img/default_quiz.png';
 
   const levels = [
     { key: 'ALL', label: 'Сите' },
@@ -63,7 +60,6 @@
     { key: 'ADVANCED', label: 'Напредно' },
     { key: 'FUN', label: 'Забавно' },
   ];
-  const levelImages = { BEGINNER: beforeImage, INTERMEDIATE: afterImage, ADVANCED: quizImage, FUN: gameImage };
   const quizzes = ref([]);
   const activeLevel = ref('ALL');
   const loading = ref(false);
@@ -77,7 +73,7 @@
     return levels.find((item) => item.key === level)?.label || level || 'Квиз';
   }
   function imageFor(quiz) {
-    return levelImages[quiz.level] || quizImage;
+    return quiz.imageUrl || defaultQuizImage;
   }
   async function loadQuizzes() {
     loading.value = true;
@@ -108,7 +104,7 @@
     align-items: end;
     background:
       linear-gradient(115deg, rgba(19, 67, 37, 0.96) 0%, rgba(46, 125, 50, 0.9) 48%, rgba(46, 125, 50, 0.42) 100%),
-      url('../img/quiz.png') right center / contain no-repeat;
+      url('../img/default_quiz.png') right center / contain no-repeat;
     border-radius: 8px;
     color: #fff;
     display: grid;
@@ -295,7 +291,7 @@
     .quiz-hero {
       background:
         linear-gradient(135deg, rgba(27, 77, 43, 0.96), rgba(46, 125, 50, 0.84)),
-        url('../img/quiz.png') right 1rem bottom 1rem / 130px no-repeat;
+        url('../img/default_quiz.png') right 1rem bottom 1rem / 130px no-repeat;
     }
     .quiz-hero::after {
       display: none;

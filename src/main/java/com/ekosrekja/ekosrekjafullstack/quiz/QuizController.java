@@ -48,6 +48,7 @@ public class QuizController {
                                 q.getTitle(),
                                 q.getLevel(),
                                 q.getDescription(),
+                                q.getImageUrl(),
                                 q.getTimeMinutes()));
     }
 
@@ -96,6 +97,7 @@ public class QuizController {
                 "title", quiz.getTitle(),
                 "level", quiz.getLevel(),
                 "description", quiz.getDescription(),
+                "imageUrl", quiz.getImageUrl(),
                 "timeMinutes", quiz.getTimeMinutes(),
                 "questions", qdto);
     }
@@ -179,6 +181,7 @@ public class QuizController {
                     quiz.setTitle(quizDetails.getTitle());
                     quiz.setDescription(quizDetails.getDescription());
                     quiz.setLevel(quizDetails.getLevel());
+                    quiz.setImageUrl(quizDetails.getImageUrl());
                     quiz.setTimeMinutes(quizDetails.getTimeMinutes());
                     quiz.setActive(quizDetails.isActive());
                     return ResponseEntity.ok(quizRepo.save(quiz));

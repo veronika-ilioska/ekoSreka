@@ -6,7 +6,7 @@ import java.util.List;
 public class dto {
 
     public record QuizListItem(
-            Long id, String title, String level, String description, Integer timeMinutes) {}
+            Long id, String title, String level, String description, String imageUrl, Integer timeMinutes) {}
 
     public record QuizQuestionDto(Long id, String text, List<OptionDto> options) {
         public record OptionDto(Long id, String text, Integer ord) {}

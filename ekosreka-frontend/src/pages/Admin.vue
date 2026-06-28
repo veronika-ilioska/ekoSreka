@@ -33,7 +33,7 @@
             <button class="btn btn-outline-success" type="button" @click="loadItems">Освежи</button>
           </div>
 
-          <form v-if="activeSection !== 'quizzes'" class="content-form" @submit.prevent="createItem">
+          <form v-if="activeSection !== 'quizzes'" :key="activeSection" class="content-form" @submit.prevent="createItem">
             <div v-for="field in currentSection.fields" :key="field.name" class="field" :class="{ wide: field.type === 'textarea' }">
               <label :for="field.name">{{ field.label }}</label>
               <textarea
@@ -50,6 +50,15 @@
                   {{ option.label || option }}
                 </option>
               </select>
+              <input
+                v-else-if="field.type === 'file'"
+                :id="field.name"
+                class="form-control"
+                :type="field.type"
+                :accept="field.accept"
+                :required="field.required"
+                @change="handleContentFile(field.name, $event)"
+              />
               <input v-else :id="field.name" v-model.trim="form[field.name]" class="form-control" :type="field.type" :required="field.required" />
             </div>
 
@@ -80,6 +89,10 @@
               <div class="field">
                 <label for="quizTime">Време во минути</label>
                 <input id="quizTime" v-model.number="form.timeMinutes" class="form-control" min="1" type="number" required />
+              </div>
+              <div class="field">
+                <label for="quizImage">Слика за квизот</label>
+                <input id="quizImage" class="form-control" accept="image/*" type="file" @change="handleContentFile('file', $event)" />
               </div>
               <div class="field wide">
                 <label for="quizDescription">Опис</label>
@@ -198,7 +211,7 @@
       fields: [
         { name: 'title', label: 'Наслов', type: 'text', required: true },
         { name: 'category', label: 'Категорија', type: 'select', options: newsCategoryOptions, required: true },
-        { name: 'coverUrl', label: 'URL за насловна слика', type: 'url' },
+        { name: 'file', label: 'Прикачи насловна слика', type: 'file', accept: 'image/*', required: true },
         { name: 'content', label: 'Целосна содржина на веста', type: 'textarea', required: true },
       ],
     },
@@ -211,8 +224,7 @@
       endpoint: '/admin/photos',
       fields: [
         { name: 'title', label: 'Наслов', type: 'text', required: true },
-        { name: 'url', label: 'URL за слика', type: 'url', required: true },
-        { name: 'thumbnailUrl', label: 'URL за мала слика', type: 'url' },
+        { name: 'file', label: 'Прикачи фотографија', type: 'file', accept: 'image/*', required: true },
         { name: 'tags', label: 'Ознаки', type: 'text' },
         { name: 'description', label: 'Опис', type: 'textarea' },
       ],
@@ -225,9 +237,8 @@
       endpoint: '/admin/videos',
       fields: [
         { name: 'title', label: 'Наслов', type: 'text', required: true },
-        { name: 'source', label: 'Извор', type: 'text', required: true },
+        { name: 'file', label: 'Прикачи видео', type: 'file', accept: 'video/*', required: true },
         { name: 'icon', label: 'Икона', type: 'text' },
-        { name: 'ref', label: 'Видео референца или URL', type: 'text', required: true },
         { name: 'durationSec', label: 'Времетраење во секунди', type: 'number' },
         { name: 'description', label: 'Опис', type: 'textarea' },
       ],
@@ -241,7 +252,7 @@
       fields: [
         { name: 'title', label: 'Наслов', type: 'text', required: true },
         { name: 'difficulty', label: 'Тежина', type: 'select', options: difficultyOptions, required: true },
-        { name: 'thumbnailUrl', label: 'URL за мала слика', type: 'url' },
+        { name: 'file', label: 'Прикачи слика', type: 'file', accept: 'image/*', required: true },
         { name: 'description', label: 'Опис', type: 'textarea', required: true },
         { name: 'rules', label: 'Правила', type: 'textarea' },
       ],
@@ -282,6 +293,7 @@
       form.level = '';
       form.timeMinutes = 5;
       form.description = '';
+      form.file = null;
       importText.value = '';
       importError.value = '';
       quizQuestions.value = [newQuestion()];
@@ -300,6 +312,19 @@
   }
   function cleanPayload() {
     if (activeSection.value === 'quizzes') {
+      if (form.file) {
+        const payload = new FormData();
+        payload.append('title', form.title);
+        payload.append('level', form.level);
+        payload.append('timeMinutes', Number(form.timeMinutes || 5));
+        payload.append('description', form.description);
+        payload.append('questions', JSON.stringify(quizQuestions.value.map((question) => ({
+          text: question.text,
+          options: question.options.map((option) => ({ text: option.text, correct: option.correct })),
+        }))));
+        payload.append('file', form.file);
+        return payload;
+      }
       return {
         title: form.title,
         level: form.level,
@@ -311,12 +336,24 @@
         })),
       };
     }
+    if (['news', 'photos', 'videos', 'games'].includes(activeSection.value)) {
+      const payload = new FormData();
+      currentSection.value.fields.forEach((field) => {
+        const value = form[field.name];
+        if (value === '' || value === null || value === undefined) return;
+        payload.append(field.name, value);
+      });
+      return payload;
+    }
     return currentSection.value.fields.reduce((payload, field) => {
       const value = form[field.name];
       if (value === '' || value === null || value === undefined) return payload;
       payload[field.name] = field.type === 'number' ? Number(value) : value;
       return payload;
     }, {});
+  }
+  function handleContentFile(fieldName, event) {
+    form[fieldName] = event.target.files?.[0] || null;
   }
   function itemSubtitle(item) {
     if (activeSection.value === 'news') return `${item.category || 'Без категорија'} - ${formatDate(item.createdAt)}`;

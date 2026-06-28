@@ -38,6 +38,9 @@ public class User implements UserDetails {
 
     private String lastName;
 
+    @Column(name = "profile_picture_url")
+    private String profilePictureUrl;
+
     private Boolean enabled = true;
 
     private Boolean accountNonExpired = true;

@@ -1,5 +1,6 @@
 package com.ekosrekja.ekosrekjafullstack.admin;
 
+import com.ekosrekja.ekosrekjafullstack.fun.Difficulty;
 import com.ekosrekja.ekosrekjafullstack.fun.entity.Game;
 import com.ekosrekja.ekosrekjafullstack.fun.entity.HoroscopeEntry;
 import com.ekosrekja.ekosrekjafullstack.fun.entity.Photo;
@@ -18,15 +19,25 @@ import com.ekosrekja.ekosrekjafullstack.quiz.repo.QuizQuestionRepository;
 import com.ekosrekja.ekosrekjafullstack.quiz.repo.QuizRepository;
 import com.ekosrekja.ekosrekjafullstack.quiz.repo.QuizSubmissionRepository;
 import com.ekosrekja.ekosrekjafullstack.user.repository.UserRepository;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -37,7 +48,9 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -54,6 +67,10 @@ public class AdminController {
     private final QuizQuestionRepository quizQuestionRepository;
     private final QuizOptionRepository quizOptionRepository;
     private final QuizSubmissionRepository quizSubmissionRepository;
+    private final ObjectMapper objectMapper;
+
+    @Value("${app.upload-dir:uploads}")
+    private String uploadDir;
 
     @GetMapping("/news")
     public Page<News> news(
@@ -64,7 +81,7 @@ public class AdminController {
         return newsRepository.findAll(PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
     }
 
-    @PostMapping("/news")
+    @PostMapping(value = "/news", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<News> createNews(
             @RequestHeader("X-User-Id") Long userId,
             @RequestBody News news) {
@@ -73,6 +90,26 @@ public class AdminController {
         if (news.getPublishedAt() == null) {
             news.setPublishedAt(Instant.now());
         }
+        return ResponseEntity.status(HttpStatus.CREATED).body(newsRepository.save(news));
+    }
+
+    @PostMapping(value = "/news", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<News> uploadNews(
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestParam String title,
+            @RequestParam String category,
+            @RequestParam String content,
+            @RequestParam("file") MultipartFile file) {
+        requireAdmin(userId);
+        String mediaUrl = storeUpload(file, "news", "image/");
+
+        News news = new News();
+        news.setTitle(title);
+        news.setCategory(category);
+        news.setContent(content);
+        news.setCoverUrl(mediaUrl);
+        news.setPublished(true);
+        news.setPublishedAt(Instant.now());
         return ResponseEntity.status(HttpStatus.CREATED).body(newsRepository.save(news));
     }
 
@@ -93,17 +130,49 @@ public class AdminController {
         return quizRepository.findAll(PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "title")));
     }
 
-    @PostMapping("/quizzes")
+    @PostMapping(value = "/quizzes", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Transactional
     public ResponseEntity<Quiz> createQuiz(
             @RequestHeader("X-User-Id") Long userId,
             @RequestBody AdminQuizRequest request) {
         requireAdmin(userId);
 
+        return createQuizFromRequest(request, null);
+    }
+
+    @PostMapping(value = "/quizzes", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Transactional
+    public ResponseEntity<Quiz> uploadQuiz(
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestParam String title,
+            @RequestParam String level,
+            @RequestParam(required = false) Integer timeMinutes,
+            @RequestParam String description,
+            @RequestParam String questions,
+            @RequestParam(value = "file", required = false) MultipartFile file) {
+        requireAdmin(userId);
+
+        List<AdminQuizQuestionRequest> questionRequests;
+        try {
+            questionRequests = objectMapper.readValue(
+                    questions,
+                    new TypeReference<List<AdminQuizQuestionRequest>>() {});
+        } catch (IOException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid quiz questions", ex);
+        }
+
+        String imageUrl = file == null || file.isEmpty() ? null : storeUpload(file, "quizzes", "image/");
+        return createQuizFromRequest(
+                new AdminQuizRequest(title, description, level, timeMinutes, questionRequests),
+                imageUrl);
+    }
+
+    private ResponseEntity<Quiz> createQuizFromRequest(AdminQuizRequest request, String imageUrl) {
         Quiz quiz = new Quiz();
         quiz.setTitle(request.title());
         quiz.setDescription(request.description());
         quiz.setLevel(request.level());
+        quiz.setImageUrl(imageUrl);
         quiz.setTimeMinutes(request.timeMinutes() == null ? 5 : request.timeMinutes());
         quiz.setActive(true);
         Quiz savedQuiz = quizRepository.save(quiz);
@@ -157,11 +226,30 @@ public class AdminController {
         return photoRepository.findAll(PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
     }
 
-    @PostMapping("/photos")
+    @PostMapping(value = "/photos", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Photo> createPhoto(
             @RequestHeader("X-User-Id") Long userId,
             @RequestBody Photo photo) {
         requireAdmin(userId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(photoRepository.save(photo));
+    }
+
+    @PostMapping(value = "/photos", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Photo> uploadPhoto(
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestParam String title,
+            @RequestParam(required = false) String description,
+            @RequestParam(required = false) String tags,
+            @RequestParam("file") MultipartFile file) {
+        requireAdmin(userId);
+        String mediaUrl = storeUpload(file, "photos", "image/");
+
+        Photo photo = new Photo();
+        photo.setTitle(title);
+        photo.setDescription(description);
+        photo.setTags(tags);
+        photo.setUrl(mediaUrl);
+        photo.setThumbnailUrl(mediaUrl);
         return ResponseEntity.status(HttpStatus.CREATED).body(photoRepository.save(photo));
     }
 
@@ -182,11 +270,32 @@ public class AdminController {
         return videoRepository.findAll(PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
     }
 
-    @PostMapping("/videos")
+    @PostMapping(value = "/videos", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Video> createVideo(
             @RequestHeader("X-User-Id") Long userId,
             @RequestBody Video video) {
         requireAdmin(userId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(videoRepository.save(video));
+    }
+
+    @PostMapping(value = "/videos", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Video> uploadVideo(
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestParam String title,
+            @RequestParam(required = false) String description,
+            @RequestParam(required = false) String icon,
+            @RequestParam(required = false) Integer durationSec,
+            @RequestParam("file") MultipartFile file) {
+        requireAdmin(userId);
+        String mediaUrl = storeUpload(file, "videos", "video/");
+
+        Video video = new Video();
+        video.setTitle(title);
+        video.setDescription(description);
+        video.setSource("UPLOAD");
+        video.setIcon(icon);
+        video.setRef(mediaUrl);
+        video.setDurationSec(durationSec);
         return ResponseEntity.status(HttpStatus.CREATED).body(videoRepository.save(video));
     }
 
@@ -207,11 +316,31 @@ public class AdminController {
         return gameRepository.findAll(PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "title")));
     }
 
-    @PostMapping("/games")
+    @PostMapping(value = "/games", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Game> createGame(
             @RequestHeader("X-User-Id") Long userId,
             @RequestBody Game game) {
         requireAdmin(userId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(gameRepository.save(game));
+    }
+
+    @PostMapping(value = "/games", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Game> uploadGame(
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestParam String title,
+            @RequestParam Difficulty difficulty,
+            @RequestParam String description,
+            @RequestParam(required = false) String rules,
+            @RequestParam("file") MultipartFile file) {
+        requireAdmin(userId);
+        String mediaUrl = storeUpload(file, "games", "image/");
+
+        Game game = new Game();
+        game.setTitle(title);
+        game.setDifficulty(difficulty);
+        game.setDescription(description);
+        game.setRules(rules);
+        game.setThumbnailUrl(mediaUrl);
         return ResponseEntity.status(HttpStatus.CREATED).body(gameRepository.save(game));
     }
 
@@ -265,6 +394,47 @@ public class AdminController {
         }
         repository.deleteById(id);
         return ResponseEntity.noContent().build();
+    }
+
+    private String storeUpload(MultipartFile file, String folder, String expectedContentTypePrefix) {
+        if (file == null || file.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Upload file is required");
+        }
+
+        String contentType = file.getContentType() == null ? "" : file.getContentType().toLowerCase(Locale.ROOT);
+        if (!contentType.startsWith(expectedContentTypePrefix)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid file type");
+        }
+
+        String extension = extensionFrom(file.getOriginalFilename());
+        String filename = UUID.randomUUID() + extension;
+        Path targetFolder = Paths.get(uploadDir).toAbsolutePath().normalize().resolve(folder);
+        Path target = targetFolder.resolve(filename).normalize();
+        if (!target.startsWith(targetFolder)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid file name");
+        }
+
+        try {
+            Files.createDirectories(targetFolder);
+            file.transferTo(target);
+        } catch (IOException ex) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Could not save uploaded file", ex);
+        }
+
+        return ServletUriComponentsBuilder.fromCurrentContextPath()
+                .path("/uploads/")
+                .path(folder)
+                .path("/")
+                .path(filename)
+                .toUriString();
+    }
+
+    private String extensionFrom(String filename) {
+        if (filename == null) return "";
+        String cleanName = Paths.get(filename).getFileName().toString();
+        int dotIndex = cleanName.lastIndexOf('.');
+        if (dotIndex < 0 || dotIndex == cleanName.length() - 1) return "";
+        return cleanName.substring(dotIndex).toLowerCase(Locale.ROOT);
     }
 
     public record AdminQuizRequest(

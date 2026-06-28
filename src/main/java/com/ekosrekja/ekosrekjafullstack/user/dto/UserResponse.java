@@ -21,6 +21,8 @@ public class UserResponse {
 
     private String lastName;
 
+    private String profilePictureUrl;
+
     private Long createdAt;
 
     private Boolean isAdmin;

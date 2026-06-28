@@ -77,6 +77,7 @@ public class AuthService {
         response.setEmail(user.getEmail());
         response.setFirstName(user.getFirstName());
         response.setLastName(user.getLastName());
+        response.setProfilePictureUrl(user.getProfilePictureUrl());
         response.setCreatedAt(user.getCreatedAt());
         response.setIsAdmin(Boolean.TRUE.equals(user.getIsAdmin()) || adminRepository.existsByUserId(user.getId()));
         return response;
