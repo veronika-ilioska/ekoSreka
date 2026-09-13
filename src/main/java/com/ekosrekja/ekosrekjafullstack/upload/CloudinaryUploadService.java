@@ -3,23 +3,32 @@ package com.ekosrekja.ekosrekjafullstack.upload;
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 @Service
 public class CloudinaryUploadService {
     private final Cloudinary cloudinary;
+    private final String uploadDir;
 
     public CloudinaryUploadService(
             @Value("${cloudinary.url:}") String cloudinaryUrl,
             @Value("${cloudinary.cloud-name:}") String cloudName,
             @Value("${cloudinary.api-key:}") String apiKey,
-            @Value("${cloudinary.api-secret:}") String apiSecret) {
+            @Value("${cloudinary.api-secret:}") String apiSecret,
+            @Value("${app.upload-dir:uploads}") String uploadDir) {
+        this.uploadDir = uploadDir;
+
         if (cloudinaryUrl != null && !cloudinaryUrl.isBlank()) {
             this.cloudinary = new Cloudinary(cloudinaryUrl);
             return;
@@ -38,11 +47,6 @@ public class CloudinaryUploadService {
     }
 
     public String upload(MultipartFile file, String folder, String expectedContentTypePrefix) {
-        if (cloudinary == null) {
-            throw new ResponseStatusException(
-                    HttpStatus.SERVICE_UNAVAILABLE,
-                    "Cloudinary is not configured");
-        }
         if (file == null || file.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Upload file is required");
         }
@@ -50,6 +54,10 @@ public class CloudinaryUploadService {
         String contentType = file.getContentType() == null ? "" : file.getContentType().toLowerCase(Locale.ROOT);
         if (!contentType.startsWith(expectedContentTypePrefix)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid file type");
+        }
+
+        if (cloudinary == null) {
+            return storeLocalUpload(file, folder);
         }
 
         String resourceType = expectedContentTypePrefix.startsWith("video/") ? "video" : "image";
@@ -71,6 +79,39 @@ public class CloudinaryUploadService {
             throw new ResponseStatusException(
                     HttpStatus.INTERNAL_SERVER_ERROR,
                     "Could not upload file to Cloudinary",
+                    ex);
+        }
+    }
+
+    private String storeLocalUpload(MultipartFile file, String folder) {
+        try {
+            Path targetDir = Paths.get(uploadDir, folder).toAbsolutePath().normalize();
+            Files.createDirectories(targetDir);
+
+            String originalName = file.getOriginalFilename() == null ? "" : file.getOriginalFilename();
+            String extension = "";
+            int dotIndex = originalName.lastIndexOf('.');
+            if (dotIndex >= 0 && dotIndex < originalName.length() - 1) {
+                extension = originalName.substring(dotIndex).toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9.]", "");
+            }
+
+            String filename = UUID.randomUUID() + extension;
+            Path targetFile = targetDir.resolve(filename).normalize();
+            if (!targetFile.startsWith(targetDir)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid upload filename");
+            }
+
+            file.transferTo(targetFile);
+            return ServletUriComponentsBuilder.fromCurrentContextPath()
+                    .path("/uploads/")
+                    .path(folder)
+                    .path("/")
+                    .path(filename)
+                    .toUriString();
+        } catch (IOException ex) {
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Could not store uploaded file",
                     ex);
         }
     }
