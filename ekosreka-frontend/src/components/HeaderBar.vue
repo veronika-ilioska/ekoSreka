@@ -130,4 +130,31 @@
   .btn-outline-light:hover {
     background: rgba(255, 255, 255, 0.1);
   }
+
+  @media (max-width: 991px) {
+    .navbar-collapse {
+      margin-top: 0.75rem;
+    }
+
+    .navbar-collapse > div,
+    .dropdown {
+      width: 100%;
+    }
+
+    .dropdown-toggle {
+      align-items: center;
+      display: flex;
+      justify-content: space-between;
+      max-width: 100%;
+      width: 100%;
+    }
+
+    .dropdown-menu {
+      margin-top: 0.5rem;
+      min-width: 0;
+      position: static !important;
+      transform: none !important;
+      width: 100%;
+    }
+  }
 </style>

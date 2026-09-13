@@ -2,19 +2,12 @@ package com.ekosrekja.ekosrekjafullstack.user.controller;
 
 
 import com.ekosrekja.ekosrekjafullstack.admin.AdminRepository;
+import com.ekosrekja.ekosrekjafullstack.upload.CloudinaryUploadService;
 import com.ekosrekja.ekosrekjafullstack.user.dto.ChangePasswordRequest;
 import com.ekosrekja.ekosrekjafullstack.user.dto.UserResponse;
 import com.ekosrekja.ekosrekjafullstack.user.entity.User;
 import com.ekosrekja.ekosrekjafullstack.user.repository.UserRepository;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Locale;
-import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -22,8 +15,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.server.ResponseStatusException;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 @RestController
 @RequestMapping("/api/profile")
@@ -32,9 +23,7 @@ public class ProfileController {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final AdminRepository adminRepository;
-
-    @Value("${app.upload-dir:uploads}")
-    private String uploadDir;
+    private final CloudinaryUploadService uploadService;
 
     @GetMapping
     public ResponseEntity<UserResponse> getCurrentUserProfile() {
@@ -108,7 +97,7 @@ public class ProfileController {
     }
 
     private ResponseEntity<UserResponse> updateProfilePicture(User user, MultipartFile file) {
-        user.setProfilePictureUrl(storeProfilePicture(file));
+        user.setProfilePictureUrl(uploadService.upload(file, "profiles", "image/"));
         User updatedUser = userRepository.save(user);
         return ResponseEntity.ok(mapToUserResponse(updatedUser));
     }
@@ -184,42 +173,4 @@ public class ProfileController {
                 .build();
     }
 
-    private String storeProfilePicture(MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Upload file is required");
-        }
-
-        String contentType = file.getContentType() == null ? "" : file.getContentType().toLowerCase(Locale.ROOT);
-        if (!contentType.startsWith("image/")) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid file type");
-        }
-
-        String extension = extensionFrom(file.getOriginalFilename());
-        String filename = UUID.randomUUID() + extension;
-        Path targetFolder = Paths.get(uploadDir).toAbsolutePath().normalize().resolve("profiles");
-        Path target = targetFolder.resolve(filename).normalize();
-        if (!target.startsWith(targetFolder)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid file name");
-        }
-
-        try {
-            Files.createDirectories(targetFolder);
-            file.transferTo(target);
-        } catch (IOException ex) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Could not save uploaded file", ex);
-        }
-
-        return ServletUriComponentsBuilder.fromCurrentContextPath()
-                .path("/uploads/profiles/")
-                .path(filename)
-                .toUriString();
-    }
-
-    private String extensionFrom(String filename) {
-        if (filename == null) return "";
-        String cleanName = Paths.get(filename).getFileName().toString();
-        int dotIndex = cleanName.lastIndexOf('.');
-        if (dotIndex < 0 || dotIndex == cleanName.length() - 1) return "";
-        return cleanName.substring(dotIndex).toLowerCase(Locale.ROOT);
-    }
 }

@@ -42,9 +42,9 @@
                 v-model.trim="form[field.name]"
                 class="form-control"
                 rows="4"
-                :required="field.required"
+                :required="isFieldRequired(field)"
               />
-              <select v-else-if="field.type === 'select'" :id="field.name" v-model="form[field.name]" class="form-select" :required="field.required">
+              <select v-else-if="field.type === 'select'" :id="field.name" v-model="form[field.name]" class="form-select" :required="isFieldRequired(field)">
                 <option value="" disabled>Избери...</option>
                 <option v-for="option in field.options" :key="option.value || option" :value="option.value || option">
                   {{ option.label || option }}
@@ -56,17 +56,19 @@
                 class="form-control"
                 :type="field.type"
                 :accept="field.accept"
-                :required="field.required"
+                :required="isFieldRequired(field)"
                 @change="handleContentFile(field.name, $event)"
               />
-              <input v-else :id="field.name" v-model.trim="form[field.name]" class="form-control" :type="field.type" :required="field.required" />
+              <input v-else :id="field.name" v-model.trim="form[field.name]" class="form-control" :type="field.type" :required="isFieldRequired(field)" />
             </div>
 
             <div class="form-actions">
               <button class="btn eco-btn" type="submit" :disabled="saving">
-                {{ saving ? 'Се зачувува...' : `Додај ${currentSection.singular}` }}
+                {{ saving ? 'Се зачувува...' : `${editingItem ? 'Зачувај' : 'Додај'} ${currentSection.singular}` }}
               </button>
-              <button class="btn btn-outline-secondary" type="button" @click="resetForm">Исчисти</button>
+              <button class="btn btn-outline-secondary" type="button" @click="editingItem ? cancelEdit() : resetForm()">
+                {{ editingItem ? 'Откажи' : 'Исчисти' }}
+              </button>
             </div>
           </form>
 
@@ -158,9 +160,11 @@
 
             <div class="form-actions">
               <button class="btn eco-btn" type="submit" :disabled="saving">
-                {{ saving ? 'Се зачувува...' : 'Додај квиз' }}
+                {{ saving ? 'Се зачувува...' : `${editingItem ? 'Зачувај' : 'Додај'} квиз` }}
               </button>
-              <button class="btn btn-outline-secondary" type="button" @click="resetForm">Исчисти</button>
+              <button class="btn btn-outline-secondary" type="button" @click="editingItem ? cancelEdit() : resetForm()">
+                {{ editingItem ? 'Откажи' : 'Исчисти' }}
+              </button>
             </div>
           </form>
 
@@ -172,7 +176,10 @@
                 <h3>{{ item.title || `${currentSection.singular} #${item.id}` }}</h3>
                 <p>{{ itemSubtitle(item) }}</p>
               </div>
-              <button class="btn btn-outline-danger" type="button" @click="deleteItem(item)">Избриши</button>
+              <div class="item-actions">
+                <button class="btn btn-outline-success" type="button" @click="editItem(item)">Уреди</button>
+                <button class="btn btn-outline-danger" type="button" @click="deleteItem(item)">Избриши</button>
+              </div>
             </article>
           </div>
         </main>
@@ -277,6 +284,7 @@
   const items = ref([]);
   const loading = ref(false);
   const saving = ref(false);
+  const editingItem = ref(null);
   const pageError = ref('');
   const successMessage = ref('');
   const importText = ref('');
@@ -286,6 +294,9 @@
   const currentSection = computed(() => sections.find((section) => section.key === activeSection.value));
   const adminHeaders = computed(() => ({ 'X-User-Id': authStore.userId }));
 
+  function isFieldRequired(field) {
+    return Boolean(field.required && !(editingItem.value && field.type === 'file'));
+  }
   function resetForm() {
     Object.keys(form).forEach((key) => delete form[key]);
     if (activeSection.value === 'quizzes') {
@@ -305,6 +316,7 @@
   }
   function selectSection(key) {
     activeSection.value = key;
+    editingItem.value = null;
     pageError.value = '';
     successMessage.value = '';
     resetForm();
@@ -356,12 +368,13 @@
     form[fieldName] = event.target.files?.[0] || null;
   }
   function itemSubtitle(item) {
-    if (activeSection.value === 'news') return `${item.category || 'Без категорија'} - ${formatDate(item.createdAt)}`;
-    if (activeSection.value === 'quizzes') return `${item.level || 'Без ниво'} - ${item.timeMinutes || 5} мин`;
-    if (activeSection.value === 'photos') return item.tags || item.description || item.url || '';
-    if (activeSection.value === 'videos') return `${item.source || 'Видео'} - ${item.ref || ''}`;
-    if (activeSection.value === 'games') return `${item.difficulty || 'Без тежина'} - ${item.description || ''}`;
-    return `${item.sign || ''} - ${item.periodType || ''} - ${item.periodDate || ''}`;
+    const updated = item.updatedAt ? ` | Ажурирано: ${formatDate(item.updatedAt)}` : '';
+    if (activeSection.value === 'news') return `${item.category || 'Без категорија'} - ${formatDate(item.createdAt)}${updated}`;
+    if (activeSection.value === 'quizzes') return `${item.level || 'Без ниво'} - ${item.timeMinutes || 5} мин${updated}`;
+    if (activeSection.value === 'photos') return `${item.tags || item.description || item.url || ''}${updated}`;
+    if (activeSection.value === 'videos') return `${item.source || 'Видео'} - ${item.ref || ''}${updated}`;
+    if (activeSection.value === 'games') return `${item.difficulty || 'Без тежина'} - ${item.description || ''}${updated}`;
+    return `${item.sign || ''} - ${item.periodType || ''} - ${item.periodDate || ''}${updated}`;
   }
   function formatDate(value) {
     if (!value) return 'Без датум';
@@ -572,15 +585,68 @@
     pageError.value = '';
     successMessage.value = '';
     try {
-      await api.post(currentSection.value.endpoint, cleanPayload(), { headers: adminHeaders.value });
-      successMessage.value = `${currentSection.value.singular} е успешно додадено.`;
+      if (editingItem.value) {
+        await api.put(`${currentSection.value.endpoint}/${editingItem.value.id}`, cleanPayload(), { headers: adminHeaders.value });
+        successMessage.value = `${currentSection.value.singular} е успешно ажурирано.`;
+      } else {
+        await api.post(currentSection.value.endpoint, cleanPayload(), { headers: adminHeaders.value });
+        successMessage.value = `${currentSection.value.singular} е успешно додадено.`;
+      }
+      editingItem.value = null;
       resetForm();
       await loadItems();
     } catch (error) {
-      pageError.value = error.response?.data?.message || `Не може да се додаде ${currentSection.value.singular}.`;
+      pageError.value = error.response?.data?.message || `Не може да се зачува ${currentSection.value.singular}.`;
     } finally {
       saving.value = false;
     }
+  }
+  async function editItem(item) {
+    pageError.value = '';
+    successMessage.value = '';
+    editingItem.value = item;
+    resetForm();
+
+    if (activeSection.value === 'quizzes') {
+      try {
+        const { data } = await api.get(`${currentSection.value.endpoint}/${item.id}`, { headers: adminHeaders.value });
+        editingItem.value = data;
+        form.title = data.title || '';
+        form.level = data.level || '';
+        form.timeMinutes = data.timeMinutes || 5;
+        form.description = data.description || '';
+        form.file = null;
+        quizQuestions.value = (data.questions || []).map((question) => ({
+          uid: crypto.randomUUID(),
+          text: question.text || '',
+          options: (question.options || []).map((option) => ({
+            uid: crypto.randomUUID(),
+            text: option.text || '',
+            correct: Boolean(option.correct),
+          })),
+        }));
+        if (quizQuestions.value.length === 0) {
+          quizQuestions.value = [newQuestion()];
+        }
+      } catch (error) {
+        editingItem.value = null;
+        pageError.value = error.response?.data?.message || 'Квизот не може да се вчита за уредување.';
+      }
+      return;
+    }
+
+    currentSection.value.fields.forEach((field) => {
+      if (field.type === 'file') {
+        form[field.name] = null;
+      } else {
+        form[field.name] = item[field.name] ?? '';
+      }
+    });
+  }
+  function cancelEdit() {
+    editingItem.value = null;
+    pageError.value = '';
+    resetForm();
   }
   async function deleteItem(item) {
     if (!confirm(`Избриши "${item.title || currentSection.value.singular}"?`)) return;
@@ -608,10 +674,12 @@
   .admin-page {
     color: var(--eco-text-dark);
     padding: 1rem 0 4rem;
+    width: 100%;
   }
   .admin-shell {
     margin: 0 auto;
     max-width: 1200px;
+    width: 100%;
   }
   .admin-hero {
     background:
@@ -650,6 +718,7 @@
     display: grid;
     gap: 1.25rem;
     grid-template-columns: 220px minmax(0, 1fr);
+    min-width: 0;
   }
   .admin-tabs,
   .items-list,
@@ -677,6 +746,7 @@
     display: grid;
     gap: 0.25rem;
     min-height: 0;
+    min-width: 0;
     padding: 0.85rem;
     text-align: left;
     transition:
@@ -741,6 +811,7 @@
   .admin-panel {
     display: grid;
     gap: 1.25rem;
+    min-width: 0;
   }
   .panel-heading,
   .form-actions,
@@ -765,6 +836,7 @@
     gap: 1rem;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     margin-bottom: 1.25rem;
+    min-width: 0;
   }
   .field,
   .option-editor {
@@ -773,6 +845,7 @@
     border-radius: 8px;
     display: grid;
     gap: 0.45rem;
+    min-width: 0;
     padding: 1rem;
   }
   .field label,
@@ -786,7 +859,13 @@
   .form-select {
     border: 1px solid #d7e6d8;
     border-radius: 8px;
+    font-size: 16px;
     min-height: 44px;
+    width: 100%;
+  }
+  textarea.form-control {
+    min-height: 132px;
+    resize: vertical;
   }
   .form-control:focus,
   .form-select:focus {
@@ -801,9 +880,18 @@
     display: grid;
     gap: 0.75rem;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    min-width: 0;
   }
   .item-row {
     align-items: center;
+    min-width: 0;
+  }
+  .item-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+  .item-row > div {
+    min-width: 0;
   }
   .item-row h3 {
     color: #1b2a1b;
@@ -816,10 +904,38 @@
     color: #506650;
   }
   @media (max-width: 991px) {
+    .admin-page {
+      padding: 0 0 2.5rem;
+    }
+    .admin-shell {
+      max-width: none;
+    }
     .admin-layout,
     .content-form,
     .option-grid {
       grid-template-columns: 1fr;
+    }
+    .admin-tabs {
+      display: flex;
+      gap: 0.6rem;
+      margin: 0 -0.75rem;
+      overflow-x: auto;
+      padding: 0 0.75rem 0.35rem;
+      position: static;
+      scrollbar-width: thin;
+    }
+    .admin-tabs button {
+      flex: 0 0 min(78vw, 260px);
+    }
+    .admin-panel,
+    .admin-tabs button,
+    .item-row,
+    .empty-state,
+    .question-editor,
+    .field,
+    .option-editor,
+    .import-panel {
+      padding: 0.85rem;
     }
     .import-heading {
       align-items: stretch;
@@ -837,6 +953,52 @@
     .item-row {
       align-items: stretch;
       flex-direction: column;
+    }
+    .panel-heading .btn,
+    .form-actions .btn,
+    .builder-heading .btn,
+    .question-editor-top .btn,
+    .item-row .btn,
+    .import-file-button {
+      width: 100%;
+    }
+    .item-actions {
+      flex-direction: column;
+      width: 100%;
+    }
+  }
+  @media (max-width: 575px) {
+    .admin-hero {
+      background: linear-gradient(135deg, rgba(27, 77, 43, 0.95), rgba(46, 125, 50, 0.86));
+      margin-left: -0.25rem;
+      margin-right: -0.25rem;
+      min-height: 0;
+      padding: 1.25rem;
+    }
+    .admin-hero h1 {
+      font-size: 2rem;
+      line-height: 1.08;
+    }
+    .admin-hero p:last-child,
+    .panel-heading p,
+    .import-heading p,
+    .admin-tabs button span {
+      font-size: 0.9rem;
+    }
+    .admin-panel {
+      gap: 1rem;
+      margin-left: -0.25rem;
+      margin-right: -0.25rem;
+    }
+    .content-form {
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+    .correct-toggle {
+      align-items: center;
+      display: flex;
+      gap: 0.5rem;
+      min-height: 44px;
     }
   }
 </style>

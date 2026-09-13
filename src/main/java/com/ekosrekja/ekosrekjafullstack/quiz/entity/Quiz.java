@@ -1,6 +1,7 @@
 package com.ekosrekja.ekosrekjafullstack.quiz.entity;
 
 import jakarta.persistence.*;
+import java.time.Instant;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -22,6 +23,13 @@ public class Quiz {
 
     private Integer timeMinutes = 5;
     private boolean active = true;
+    private Instant updatedAt;
+
+    @PrePersist
+    @PreUpdate
+    protected void touchUpdatedAt() {
+        updatedAt = Instant.now();
+    }
 }
 
 

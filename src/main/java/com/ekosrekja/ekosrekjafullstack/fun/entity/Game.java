@@ -2,6 +2,7 @@ package com.ekosrekja.ekosrekjafullstack.fun.entity;
 
 import com.ekosrekja.ekosrekjafullstack.fun.Difficulty;
 import jakarta.persistence.*;
+import java.time.OffsetDateTime;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -26,6 +27,13 @@ public class Game {
     private Difficulty difficulty;
 
     private String thumbnailUrl;
+    private OffsetDateTime updatedAt = OffsetDateTime.now();
+
+    @PrePersist
+    @PreUpdate
+    protected void touchUpdatedAt() {
+        updatedAt = OffsetDateTime.now();
+    }
 }
 
 

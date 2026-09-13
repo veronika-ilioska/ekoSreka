@@ -18,21 +18,16 @@ import com.ekosrekja.ekosrekjafullstack.quiz.repo.QuizOptionRepository;
 import com.ekosrekja.ekosrekjafullstack.quiz.repo.QuizQuestionRepository;
 import com.ekosrekja.ekosrekjafullstack.quiz.repo.QuizRepository;
 import com.ekosrekja.ekosrekjafullstack.quiz.repo.QuizSubmissionRepository;
+import com.ekosrekja.ekosrekjafullstack.upload.CloudinaryUploadService;
 import com.ekosrekja.ekosrekjafullstack.user.repository.UserRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
-import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -43,6 +38,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -50,7 +46,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -68,9 +63,7 @@ public class AdminController {
     private final QuizOptionRepository quizOptionRepository;
     private final QuizSubmissionRepository quizSubmissionRepository;
     private final ObjectMapper objectMapper;
-
-    @Value("${app.upload-dir:uploads}")
-    private String uploadDir;
+    private final CloudinaryUploadService uploadService;
 
     @GetMapping("/news")
     public Page<News> news(
@@ -101,7 +94,7 @@ public class AdminController {
             @RequestParam String content,
             @RequestParam("file") MultipartFile file) {
         requireAdmin(userId);
-        String mediaUrl = storeUpload(file, "news", "image/");
+        String mediaUrl = uploadService.upload(file, "news", "image/");
 
         News news = new News();
         news.setTitle(title);
@@ -111,6 +104,55 @@ public class AdminController {
         news.setPublished(true);
         news.setPublishedAt(Instant.now());
         return ResponseEntity.status(HttpStatus.CREATED).body(newsRepository.save(news));
+    }
+
+    @PutMapping(value = "/news/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<News> updateNews(
+            @RequestHeader("X-User-Id") Long userId,
+            @PathVariable Long id,
+            @RequestBody News newsDetails) {
+        requireAdmin(userId);
+        return newsRepository.findById(id)
+                .map(news -> {
+                    news.setTitle(newsDetails.getTitle());
+                    news.setCategory(newsDetails.getCategory());
+                    news.setContent(newsDetails.getContent());
+                    if (newsDetails.getCoverUrl() != null && !newsDetails.getCoverUrl().isBlank()) {
+                        news.setCoverUrl(newsDetails.getCoverUrl());
+                    }
+                    news.setPublished(newsDetails.isPublished());
+                    if (news.getPublishedAt() == null && newsDetails.isPublished()) {
+                        news.setPublishedAt(Instant.now());
+                    }
+                    return ResponseEntity.ok(newsRepository.save(news));
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PutMapping(value = "/news/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<News> updateNewsUpload(
+            @RequestHeader("X-User-Id") Long userId,
+            @PathVariable Long id,
+            @RequestParam String title,
+            @RequestParam String category,
+            @RequestParam String content,
+            @RequestParam(value = "file", required = false) MultipartFile file) {
+        requireAdmin(userId);
+        return newsRepository.findById(id)
+                .map(news -> {
+                    news.setTitle(title);
+                    news.setCategory(category);
+                    news.setContent(content);
+                    if (file != null && !file.isEmpty()) {
+                        news.setCoverUrl(uploadService.upload(file, "news", "image/"));
+                    }
+                    news.setPublished(true);
+                    if (news.getPublishedAt() == null) {
+                        news.setPublishedAt(Instant.now());
+                    }
+                    return ResponseEntity.ok(newsRepository.save(news));
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/news/{id}")
@@ -128,6 +170,37 @@ public class AdminController {
             @RequestParam(defaultValue = "10") int size) {
         requireAdmin(userId);
         return quizRepository.findAll(PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "title")));
+    }
+
+    @GetMapping("/quizzes/{id}")
+    public AdminQuizDetailResponse quiz(
+            @RequestHeader("X-User-Id") Long userId,
+            @PathVariable Long id) {
+        requireAdmin(userId);
+        Quiz quiz = quizRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Quiz not found"));
+        List<AdminQuizQuestionDetailResponse> questions = quizQuestionRepository.findByQuizIdOrderByIdAsc(id).stream()
+                .map(question -> new AdminQuizQuestionDetailResponse(
+                        question.getId(),
+                        question.getText(),
+                        quizOptionRepository.findByQuestionIdOrderByOrdAsc(question.getId()).stream()
+                                .map(option -> new AdminQuizOptionDetailResponse(
+                                        option.getId(),
+                                        option.getText(),
+                                        option.isCorrect(),
+                                        option.getOrd()))
+                                .toList()))
+                .toList();
+        return new AdminQuizDetailResponse(
+                quiz.getId(),
+                quiz.getTitle(),
+                quiz.getDescription(),
+                quiz.getLevel(),
+                quiz.getImageUrl(),
+                quiz.getTimeMinutes(),
+                quiz.isActive(),
+                quiz.getUpdatedAt(),
+                questions);
     }
 
     @PostMapping(value = "/quizzes", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -161,10 +234,51 @@ public class AdminController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid quiz questions", ex);
         }
 
-        String imageUrl = file == null || file.isEmpty() ? null : storeUpload(file, "quizzes", "image/");
+        String imageUrl = file == null || file.isEmpty() ? null : uploadService.upload(file, "quizzes", "image/");
         return createQuizFromRequest(
                 new AdminQuizRequest(title, description, level, timeMinutes, questionRequests),
                 imageUrl);
+    }
+
+    @PutMapping(value = "/quizzes/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Transactional
+    public ResponseEntity<Quiz> updateQuiz(
+            @RequestHeader("X-User-Id") Long userId,
+            @PathVariable Long id,
+            @RequestBody AdminQuizRequest request) {
+        requireAdmin(userId);
+        return quizRepository.findById(id)
+                .map(quiz -> ResponseEntity.ok(updateQuizFromRequest(quiz, request, null)))
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PutMapping(value = "/quizzes/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Transactional
+    public ResponseEntity<Quiz> updateQuizUpload(
+            @RequestHeader("X-User-Id") Long userId,
+            @PathVariable Long id,
+            @RequestParam String title,
+            @RequestParam String level,
+            @RequestParam(required = false) Integer timeMinutes,
+            @RequestParam String description,
+            @RequestParam String questions,
+            @RequestParam(value = "file", required = false) MultipartFile file) {
+        requireAdmin(userId);
+
+        List<AdminQuizQuestionRequest> questionRequests;
+        try {
+            questionRequests = objectMapper.readValue(
+                    questions,
+                    new TypeReference<List<AdminQuizQuestionRequest>>() {});
+        } catch (IOException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid quiz questions", ex);
+        }
+
+        String imageUrl = file == null || file.isEmpty() ? null : uploadService.upload(file, "quizzes", "image/");
+        AdminQuizRequest request = new AdminQuizRequest(title, description, level, timeMinutes, questionRequests);
+        return quizRepository.findById(id)
+                .map(quiz -> ResponseEntity.ok(updateQuizFromRequest(quiz, request, imageUrl)))
+                .orElse(ResponseEntity.notFound().build());
     }
 
     private ResponseEntity<Quiz> createQuizFromRequest(AdminQuizRequest request, String imageUrl) {
@@ -177,7 +291,33 @@ public class AdminController {
         quiz.setActive(true);
         Quiz savedQuiz = quizRepository.save(quiz);
 
-        for (AdminQuizQuestionRequest questionRequest : safeList(request.questions())) {
+        replaceQuizQuestions(savedQuiz, request.questions());
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(savedQuiz);
+    }
+
+    private Quiz updateQuizFromRequest(Quiz quiz, AdminQuizRequest request, String imageUrl) {
+        quiz.setTitle(request.title());
+        quiz.setDescription(request.description());
+        quiz.setLevel(request.level());
+        if (imageUrl != null) {
+            quiz.setImageUrl(imageUrl);
+        }
+        quiz.setTimeMinutes(request.timeMinutes() == null ? 5 : request.timeMinutes());
+        quiz.setActive(true);
+        Quiz savedQuiz = quizRepository.save(quiz);
+        replaceQuizQuestions(savedQuiz, request.questions());
+        return savedQuiz;
+    }
+
+    private void replaceQuizQuestions(Quiz savedQuiz, List<AdminQuizQuestionRequest> questionRequests) {
+        var existingQuestions = quizQuestionRepository.findByQuizIdOrderByIdAsc(savedQuiz.getId());
+        for (QuizQuestion question : existingQuestions) {
+            quizOptionRepository.deleteByQuestionId(question.getId());
+        }
+        quizQuestionRepository.deleteByQuizId(savedQuiz.getId());
+
+        for (AdminQuizQuestionRequest questionRequest : safeList(questionRequests)) {
             QuizQuestion question = new QuizQuestion();
             question.setQuiz(savedQuiz);
             question.setText(questionRequest.text());
@@ -193,8 +333,6 @@ public class AdminController {
                 quizOptionRepository.save(option);
             }
         }
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedQuiz);
     }
 
     @DeleteMapping("/quizzes/{id}")
@@ -242,7 +380,7 @@ public class AdminController {
             @RequestParam(required = false) String tags,
             @RequestParam("file") MultipartFile file) {
         requireAdmin(userId);
-        String mediaUrl = storeUpload(file, "photos", "image/");
+        String mediaUrl = uploadService.upload(file, "photos", "image/");
 
         Photo photo = new Photo();
         photo.setTitle(title);
@@ -251,6 +389,53 @@ public class AdminController {
         photo.setUrl(mediaUrl);
         photo.setThumbnailUrl(mediaUrl);
         return ResponseEntity.status(HttpStatus.CREATED).body(photoRepository.save(photo));
+    }
+
+    @PutMapping(value = "/photos/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Photo> updatePhoto(
+            @RequestHeader("X-User-Id") Long userId,
+            @PathVariable Long id,
+            @RequestBody Photo photoDetails) {
+        requireAdmin(userId);
+        return photoRepository.findById(id)
+                .map(photo -> {
+                    photo.setTitle(photoDetails.getTitle());
+                    photo.setDescription(photoDetails.getDescription());
+                    photo.setTags(photoDetails.getTags());
+                    if (photoDetails.getUrl() != null && !photoDetails.getUrl().isBlank()) {
+                        photo.setUrl(photoDetails.getUrl());
+                        photo.setThumbnailUrl(photoDetails.getThumbnailUrl() == null
+                                || photoDetails.getThumbnailUrl().isBlank()
+                                        ? photoDetails.getUrl()
+                                        : photoDetails.getThumbnailUrl());
+                    }
+                    return ResponseEntity.ok(photoRepository.save(photo));
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PutMapping(value = "/photos/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Photo> updatePhotoUpload(
+            @RequestHeader("X-User-Id") Long userId,
+            @PathVariable Long id,
+            @RequestParam String title,
+            @RequestParam(required = false) String description,
+            @RequestParam(required = false) String tags,
+            @RequestParam(value = "file", required = false) MultipartFile file) {
+        requireAdmin(userId);
+        return photoRepository.findById(id)
+                .map(photo -> {
+                    photo.setTitle(title);
+                    photo.setDescription(description);
+                    photo.setTags(tags);
+                    if (file != null && !file.isEmpty()) {
+                        String mediaUrl = uploadService.upload(file, "photos", "image/");
+                        photo.setUrl(mediaUrl);
+                        photo.setThumbnailUrl(mediaUrl);
+                    }
+                    return ResponseEntity.ok(photoRepository.save(photo));
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/photos/{id}")
@@ -287,7 +472,7 @@ public class AdminController {
             @RequestParam(required = false) Integer durationSec,
             @RequestParam("file") MultipartFile file) {
         requireAdmin(userId);
-        String mediaUrl = storeUpload(file, "videos", "video/");
+        String mediaUrl = uploadService.upload(file, "videos", "video/");
 
         Video video = new Video();
         video.setTitle(title);
@@ -297,6 +482,54 @@ public class AdminController {
         video.setRef(mediaUrl);
         video.setDurationSec(durationSec);
         return ResponseEntity.status(HttpStatus.CREATED).body(videoRepository.save(video));
+    }
+
+    @PutMapping(value = "/videos/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Video> updateVideo(
+            @RequestHeader("X-User-Id") Long userId,
+            @PathVariable Long id,
+            @RequestBody Video videoDetails) {
+        requireAdmin(userId);
+        return videoRepository.findById(id)
+                .map(video -> {
+                    video.setTitle(videoDetails.getTitle());
+                    video.setDescription(videoDetails.getDescription());
+                    video.setIcon(videoDetails.getIcon());
+                    video.setDurationSec(videoDetails.getDurationSec());
+                    if (videoDetails.getSource() != null && !videoDetails.getSource().isBlank()) {
+                        video.setSource(videoDetails.getSource());
+                    }
+                    if (videoDetails.getRef() != null && !videoDetails.getRef().isBlank()) {
+                        video.setRef(videoDetails.getRef());
+                    }
+                    return ResponseEntity.ok(videoRepository.save(video));
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PutMapping(value = "/videos/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Video> updateVideoUpload(
+            @RequestHeader("X-User-Id") Long userId,
+            @PathVariable Long id,
+            @RequestParam String title,
+            @RequestParam(required = false) String description,
+            @RequestParam(required = false) String icon,
+            @RequestParam(required = false) Integer durationSec,
+            @RequestParam(value = "file", required = false) MultipartFile file) {
+        requireAdmin(userId);
+        return videoRepository.findById(id)
+                .map(video -> {
+                    video.setTitle(title);
+                    video.setDescription(description);
+                    video.setIcon(icon);
+                    video.setDurationSec(durationSec);
+                    if (file != null && !file.isEmpty()) {
+                        video.setSource("UPLOAD");
+                        video.setRef(uploadService.upload(file, "videos", "video/"));
+                    }
+                    return ResponseEntity.ok(videoRepository.save(video));
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/videos/{id}")
@@ -333,7 +566,7 @@ public class AdminController {
             @RequestParam(required = false) String rules,
             @RequestParam("file") MultipartFile file) {
         requireAdmin(userId);
-        String mediaUrl = storeUpload(file, "games", "image/");
+        String mediaUrl = uploadService.upload(file, "games", "image/");
 
         Game game = new Game();
         game.setTitle(title);
@@ -342,6 +575,50 @@ public class AdminController {
         game.setRules(rules);
         game.setThumbnailUrl(mediaUrl);
         return ResponseEntity.status(HttpStatus.CREATED).body(gameRepository.save(game));
+    }
+
+    @PutMapping(value = "/games/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Game> updateGame(
+            @RequestHeader("X-User-Id") Long userId,
+            @PathVariable Long id,
+            @RequestBody Game gameDetails) {
+        requireAdmin(userId);
+        return gameRepository.findById(id)
+                .map(game -> {
+                    game.setTitle(gameDetails.getTitle());
+                    game.setDifficulty(gameDetails.getDifficulty());
+                    game.setDescription(gameDetails.getDescription());
+                    game.setRules(gameDetails.getRules());
+                    if (gameDetails.getThumbnailUrl() != null && !gameDetails.getThumbnailUrl().isBlank()) {
+                        game.setThumbnailUrl(gameDetails.getThumbnailUrl());
+                    }
+                    return ResponseEntity.ok(gameRepository.save(game));
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PutMapping(value = "/games/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Game> updateGameUpload(
+            @RequestHeader("X-User-Id") Long userId,
+            @PathVariable Long id,
+            @RequestParam String title,
+            @RequestParam Difficulty difficulty,
+            @RequestParam String description,
+            @RequestParam(required = false) String rules,
+            @RequestParam(value = "file", required = false) MultipartFile file) {
+        requireAdmin(userId);
+        return gameRepository.findById(id)
+                .map(game -> {
+                    game.setTitle(title);
+                    game.setDifficulty(difficulty);
+                    game.setDescription(description);
+                    game.setRules(rules);
+                    if (file != null && !file.isEmpty()) {
+                        game.setThumbnailUrl(uploadService.upload(file, "games", "image/"));
+                    }
+                    return ResponseEntity.ok(gameRepository.save(game));
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/games/{id}")
@@ -370,6 +647,25 @@ public class AdminController {
         return ResponseEntity.status(HttpStatus.CREATED).body(horoscopeRepository.save(entry));
     }
 
+    @PutMapping("/horoscope/{id}")
+    public ResponseEntity<HoroscopeEntry> updateHoroscope(
+            @RequestHeader("X-User-Id") Long userId,
+            @PathVariable Long id,
+            @RequestBody HoroscopeEntry entryDetails) {
+        requireAdmin(userId);
+        return horoscopeRepository.findById(id)
+                .map(entry -> {
+                    entry.setSign(entryDetails.getSign());
+                    entry.setPeriodType(entryDetails.getPeriodType());
+                    entry.setPeriodDate(entryDetails.getPeriodDate());
+                    entry.setTitle(entryDetails.getTitle());
+                    entry.setContent(entryDetails.getContent());
+                    entry.setEcoTip(entryDetails.getEcoTip());
+                    return ResponseEntity.ok(horoscopeRepository.save(entry));
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
     @DeleteMapping("/horoscope/{id}")
     public ResponseEntity<Void> deleteHoroscope(
             @RequestHeader("X-User-Id") Long userId,
@@ -396,53 +692,34 @@ public class AdminController {
         return ResponseEntity.noContent().build();
     }
 
-    private String storeUpload(MultipartFile file, String folder, String expectedContentTypePrefix) {
-        if (file == null || file.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Upload file is required");
-        }
-
-        String contentType = file.getContentType() == null ? "" : file.getContentType().toLowerCase(Locale.ROOT);
-        if (!contentType.startsWith(expectedContentTypePrefix)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid file type");
-        }
-
-        String extension = extensionFrom(file.getOriginalFilename());
-        String filename = UUID.randomUUID() + extension;
-        Path targetFolder = Paths.get(uploadDir).toAbsolutePath().normalize().resolve(folder);
-        Path target = targetFolder.resolve(filename).normalize();
-        if (!target.startsWith(targetFolder)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid file name");
-        }
-
-        try {
-            Files.createDirectories(targetFolder);
-            file.transferTo(target);
-        } catch (IOException ex) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Could not save uploaded file", ex);
-        }
-
-        return ServletUriComponentsBuilder.fromCurrentContextPath()
-                .path("/uploads/")
-                .path(folder)
-                .path("/")
-                .path(filename)
-                .toUriString();
-    }
-
-    private String extensionFrom(String filename) {
-        if (filename == null) return "";
-        String cleanName = Paths.get(filename).getFileName().toString();
-        int dotIndex = cleanName.lastIndexOf('.');
-        if (dotIndex < 0 || dotIndex == cleanName.length() - 1) return "";
-        return cleanName.substring(dotIndex).toLowerCase(Locale.ROOT);
-    }
-
     public record AdminQuizRequest(
             String title,
             String description,
             String level,
             Integer timeMinutes,
             List<AdminQuizQuestionRequest> questions) {}
+
+    public record AdminQuizDetailResponse(
+            Long id,
+            String title,
+            String description,
+            String level,
+            String imageUrl,
+            Integer timeMinutes,
+            boolean active,
+            Instant updatedAt,
+            List<AdminQuizQuestionDetailResponse> questions) {}
+
+    public record AdminQuizQuestionDetailResponse(
+            Long id,
+            String text,
+            List<AdminQuizOptionDetailResponse> options) {}
+
+    public record AdminQuizOptionDetailResponse(
+            Long id,
+            String text,
+            boolean correct,
+            Integer ord) {}
 
     public record AdminQuizQuestionRequest(
             String text,
