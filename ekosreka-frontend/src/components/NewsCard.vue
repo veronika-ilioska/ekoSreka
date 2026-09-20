@@ -37,7 +37,12 @@
   });
 
   const excerpt = computed(() => {
-    const content = props.item.content || '';
+    const content = (props.item.content || '')
+      .replace(/!\[[^\]]*\]\([^)]+\)/g, '')
+      .replace(/\[color=#[0-9a-f]{6}\]([\s\S]*?)\[\/color\]/gi, '$1')
+      .replace(/\*\*([\s\S]*?)\*\*/g, '$1')
+      .replace(/_([\s\S]*?)_/g, '$1')
+      .trim();
     return `${content.slice(0, 140)}${content.length > 140 ? '...' : ''}`;
   });
 </script>

@@ -106,6 +106,14 @@ public class AdminController {
         return ResponseEntity.status(HttpStatus.CREATED).body(newsRepository.save(news));
     }
 
+    @PostMapping(value = "/news/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public InlineNewsImageResponse uploadNewsImage(
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestParam("file") MultipartFile file) {
+        requireAdmin(userId);
+        return new InlineNewsImageResponse(uploadService.upload(file, "news", "image/"));
+    }
+
     @PutMapping(value = "/news/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<News> updateNews(
             @RequestHeader("X-User-Id") Long userId,
@@ -698,6 +706,8 @@ public class AdminController {
             String level,
             Integer timeMinutes,
             List<AdminQuizQuestionRequest> questions) {}
+
+    public record InlineNewsImageResponse(String url) {}
 
     public record AdminQuizDetailResponse(
             Long id,

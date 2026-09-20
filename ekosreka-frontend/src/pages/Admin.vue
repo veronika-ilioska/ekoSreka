@@ -36,8 +36,57 @@
           <form v-if="activeSection !== 'quizzes'" :key="activeSection" class="content-form" @submit.prevent="createItem">
             <div v-for="field in currentSection.fields" :key="field.name" class="field" :class="{ wide: field.type === 'textarea' }">
               <label :for="field.name">{{ field.label }}</label>
+              <div v-if="isNewsContentField(field)" class="news-body-editor">
+                <div v-for="(block, index) in newsBlocks" :key="block.uid" class="news-block" :class="`news-block--${block.type}`">
+                  <template v-if="block.type === 'text'">
+                    <div class="text-format-toolbar">
+                      <button class="format-button" type="button" title="Bold" @mousedown.prevent @click="applyTextFormat(block, 'bold')">
+                        B
+                      </button>
+                      <button class="format-button format-button--italic" type="button" title="Italic" @mousedown.prevent @click="applyTextFormat(block, 'italic')">
+                        I
+                      </button>
+                      <label class="color-control" title="Text color">
+                        <span>Боја</span>
+                        <input v-model="block.color" type="color" />
+                      </label>
+                      <button class="btn btn-outline-secondary btn-sm" type="button" @mousedown.prevent @click="applyTextFormat(block, 'color')">
+                        Примени боја
+                      </button>
+                    </div>
+                    <textarea
+                      :ref="(element) => setNewsTextBlockTextarea(block, element)"
+                      v-model="block.text"
+                      class="form-control"
+                      rows="5"
+                      placeholder="Напиши дел од веста..."
+                      @input="syncNewsContent"
+                    />
+                    <div class="block-actions">
+                      <label class="btn btn-outline-success inline-image-button">
+                        {{ uploadingInlineImage ? 'Се прикачува...' : 'Прикачи слика под овој текст' }}
+                        <input accept="image/*" type="file" :disabled="uploadingInlineImage" @change="uploadInlineNewsImage($event, index + 1)" />
+                      </label>
+                      <button class="btn btn-outline-secondary" type="button" @click="addNewsTextBlock(index + 1)">Додај текст</button>
+                      <button class="btn btn-outline-danger" type="button" :disabled="newsBlocks.length === 1" @click="removeNewsBlock(index)">Отстрани</button>
+                    </div>
+                  </template>
+                  <template v-else>
+                    <img :src="block.src" :alt="block.alt" />
+                    <input v-model.trim="block.alt" class="form-control" placeholder="Опис на сликата" @input="syncNewsContent" />
+                    <div class="block-actions">
+                      <button class="btn btn-outline-secondary" type="button" @click="addNewsTextBlock(index + 1)">Додај текст под сликата</button>
+                      <button class="btn btn-outline-danger" type="button" @click="removeNewsBlock(index)">Отстрани слика</button>
+                    </div>
+                  </template>
+                </div>
+                <label class="btn btn-outline-success inline-image-button">
+                  {{ uploadingInlineImage ? 'Се прикачува...' : 'Прикачи слика на крај' }}
+                  <input accept="image/*" type="file" :disabled="uploadingInlineImage" @change="uploadInlineNewsImage($event)" />
+                </label>
+              </div>
               <textarea
-                v-if="field.type === 'textarea'"
+                v-else-if="field.type === 'textarea'"
                 :id="field.name"
                 v-model.trim="form[field.name]"
                 class="form-control"
@@ -189,7 +238,7 @@
 </template>
 
 <script setup>
-  import { computed, onMounted, reactive, ref } from 'vue';
+  import { computed, nextTick, onMounted, reactive, ref } from 'vue';
   import { useRouter } from 'vue-router';
   import  api  from '../api';
   import { useAuthStore } from '../stores/authStore';
@@ -291,11 +340,17 @@
   const importError = ref('');
   const form = reactive({});
   const quizQuestions = ref([]);
+  const newsBlocks = ref([]);
+  const newsTextareas = reactive({});
+  const uploadingInlineImage = ref(false);
   const currentSection = computed(() => sections.find((section) => section.key === activeSection.value));
   const adminHeaders = computed(() => ({ 'X-User-Id': authStore.userId }));
 
   function isFieldRequired(field) {
     return Boolean(field.required && !(editingItem.value && field.type === 'file'));
+  }
+  function isNewsContentField(field) {
+    return activeSection.value === 'news' && field.name === 'content';
   }
   function resetForm() {
     Object.keys(form).forEach((key) => delete form[key]);
@@ -313,6 +368,10 @@
     currentSection.value.fields.forEach((field) => {
       form[field.name] = '';
     });
+    if (activeSection.value === 'news') {
+      newsBlocks.value = [newNewsTextBlock()];
+      syncNewsContent();
+    }
   }
   function selectSection(key) {
     activeSection.value = key;
@@ -350,6 +409,9 @@
     }
     if (['news', 'photos', 'videos', 'games'].includes(activeSection.value)) {
       const payload = new FormData();
+      if (activeSection.value === 'news') {
+        form.content = serializeNewsBlocks();
+      }
       currentSection.value.fields.forEach((field) => {
         const value = form[field.name];
         if (value === '' || value === null || value === undefined) return;
@@ -366,6 +428,119 @@
   }
   function handleContentFile(fieldName, event) {
     form[fieldName] = event.target.files?.[0] || null;
+  }
+  async function uploadInlineNewsImage(event, insertIndex = newsBlocks.value.length) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    uploadingInlineImage.value = true;
+    pageError.value = '';
+    successMessage.value = '';
+    try {
+      const payload = new FormData();
+      payload.append('file', file);
+      const { data } = await api.post('/admin/news/images', payload, { headers: adminHeaders.value });
+      newsBlocks.value.splice(insertIndex, 0, newNewsImageBlock(data.url, cleanImageAlt(file.name)));
+      if (!newsBlocks.value[insertIndex + 1]) {
+        newsBlocks.value.push(newNewsTextBlock());
+      }
+      syncNewsContent();
+      successMessage.value = 'Сликата е додадена во текстот на веста.';
+    } catch (error) {
+      pageError.value = error.response?.data?.message || 'Сликата не може да се прикачи.';
+    } finally {
+      uploadingInlineImage.value = false;
+    }
+  }
+  function cleanImageAlt(filename) {
+    return (filename || 'Слика')
+      .replace(/\.[^.]+$/, '')
+      .replace(/[_-]+/g, ' ')
+      .trim() || 'Слика';
+  }
+  function newNewsTextBlock(text = '') {
+    return { uid: crypto.randomUUID(), type: 'text', text, color: '#2e7d32' };
+  }
+  function newNewsImageBlock(src, alt = 'Слика') {
+    return { uid: crypto.randomUUID(), type: 'image', src, alt };
+  }
+  function setNewsTextBlockTextarea(block, element) {
+    if (element) {
+      newsTextareas[block.uid] = element;
+    } else {
+      delete newsTextareas[block.uid];
+    }
+  }
+  async function applyTextFormat(block, format) {
+    const textarea = newsTextareas[block.uid];
+    const currentText = block.text || '';
+    const start = textarea?.selectionStart ?? currentText.length;
+    const end = textarea?.selectionEnd ?? currentText.length;
+    const selectedText = currentText.slice(start, end) || 'текст';
+    const replacement = formatSelectedText(selectedText, format, block.color);
+
+    block.text = `${currentText.slice(0, start)}${replacement}${currentText.slice(end)}`;
+    syncNewsContent();
+    await nextTick();
+    newsTextareas[block.uid]?.focus();
+    newsTextareas[block.uid]?.setSelectionRange(start, start + replacement.length);
+  }
+  function formatSelectedText(text, format, color) {
+    if (format === 'bold') return `**${text}**`;
+    if (format === 'italic') return `_${text}_`;
+    if (format === 'color') return `[color=${normalizeTextColor(color)}]${text}[/color]`;
+    return text;
+  }
+  function normalizeTextColor(color) {
+    return /^#[0-9a-f]{6}$/i.test(color || '') ? color : '#2e7d32';
+  }
+  function addNewsTextBlock(index = newsBlocks.value.length) {
+    newsBlocks.value.splice(index, 0, newNewsTextBlock());
+    syncNewsContent();
+  }
+  function removeNewsBlock(index) {
+    newsBlocks.value.splice(index, 1);
+    if (newsBlocks.value.length === 0) {
+      newsBlocks.value.push(newNewsTextBlock());
+    }
+    syncNewsContent();
+  }
+  function syncNewsContent() {
+    form.content = serializeNewsBlocks();
+  }
+  function serializeNewsBlocks() {
+    return newsBlocks.value
+      .map((block) => {
+        if (block.type === 'image') {
+          return block.src ? `![${block.alt || 'Слика'}](${block.src})` : '';
+        }
+        return (block.text || '').trim();
+      })
+      .filter(Boolean)
+      .join('\n\n');
+  }
+  function parseNewsBlocks(content) {
+    const blocks = [];
+    const imagePattern = /!\[([^\]]*)\]\(([^)\s]+)\)/g;
+    let cursor = 0;
+    let match;
+
+    while ((match = imagePattern.exec(content || '')) !== null) {
+      addNewsTextBlocks(blocks, content.slice(cursor, match.index));
+      blocks.push(newNewsImageBlock(match[2].trim(), match[1].trim() || 'Слика'));
+      cursor = match.index + match[0].length;
+    }
+
+    addNewsTextBlocks(blocks, (content || '').slice(cursor));
+    return blocks.length ? blocks : [newNewsTextBlock()];
+  }
+  function addNewsTextBlocks(blocks, text) {
+    text
+      .split(/\n{2,}/)
+      .map((paragraph) => paragraph.trim())
+      .filter(Boolean)
+      .forEach((paragraph) => blocks.push(newNewsTextBlock(paragraph)));
   }
   function itemSubtitle(item) {
     const updated = item.updatedAt ? ` | Ажурирано: ${formatDate(item.updatedAt)}` : '';
@@ -642,6 +817,10 @@
         form[field.name] = item[field.name] ?? '';
       }
     });
+    if (activeSection.value === 'news') {
+      newsBlocks.value = parseNewsBlocks(item.content || '');
+      syncNewsContent();
+    }
   }
   function cancelEdit() {
     editingItem.value = null;
@@ -799,6 +978,72 @@
     color: #506650;
   }
   .import-file-button input {
+    display: none;
+  }
+  .news-body-editor,
+  .news-block {
+    display: grid;
+    gap: 0.75rem;
+  }
+  .news-block {
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(69, 128, 81, 0.14);
+    border-radius: 8px;
+    padding: 0.75rem;
+  }
+  .text-format-toolbar {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .format-button {
+    align-items: center;
+    background: #fff;
+    border: 1px solid #d7e6d8;
+    border-radius: 8px;
+    color: #1b2a1b;
+    display: inline-flex;
+    font-weight: 900;
+    height: 36px;
+    justify-content: center;
+    min-width: 36px;
+  }
+  .format-button--italic {
+    font-style: italic;
+  }
+  .color-control {
+    align-items: center;
+    color: #24552d;
+    display: inline-flex;
+    font-size: 0.82rem;
+    font-weight: 900;
+    gap: 0.4rem;
+    margin: 0;
+    text-transform: uppercase;
+  }
+  .color-control input {
+    border: 1px solid #d7e6d8;
+    border-radius: 8px;
+    height: 36px;
+    padding: 0.2rem;
+    width: 44px;
+  }
+  .news-block--image img {
+    border-radius: 8px;
+    max-height: 280px;
+    object-fit: cover;
+    width: 100%;
+  }
+  .block-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .inline-image-button {
+    margin: 0;
+  }
+  .inline-image-button input {
     display: none;
   }
   .import-textarea {

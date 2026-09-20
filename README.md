@@ -29,7 +29,6 @@
 │   ├── V2__create_admins_and_seed_admin.sql
 │   └── V3__delete_existing_news.sql
 ├── ekosreka-frontend/           # Main Vue frontend
-├── client/                      # Older/duplicate frontend copy
 ├── pom.xml
 ├── mvnw.cmd
 └── .env                         # Local-only values, ignored by git
@@ -65,10 +64,16 @@ Password: postgre
 The backend currently reads these values from:
 
 ```text
-src/main/resources/application.properties
+src/main/resources/application.properties and the root .env file
 ```
 
 The root `.env` is ignored by git and keeps the same local values in one place.
+
+If Docker Desktop is running, you can start a matching local PostgreSQL container:
+
+```powershell
+docker compose up -d postgres
+```
 
 ## Run Backend
 
