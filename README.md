@@ -36,6 +36,20 @@
 
 Use `ekosreka-frontend` for frontend work.
 
+## Uploaded media
+
+Uploads use Cloudinary when `CLOUDINARY_URL` or all three `CLOUDINARY_CLOUD_NAME`,
+`CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET` values are configured. Otherwise,
+uploads are persisted in PostgreSQL by migration V11 and served at `/api/media/{folder}/{filename}`.
+Include `stored_uploads` in database backups; large media increases database storage usage.
+Cloudinary is preferable for large videos.
+
+Legacy `/uploads/` links still serve files from `UPLOAD_DIR`. Those files were stored
+on the server filesystem and may be lost when a deployment replaces that filesystem.
+Deploy the backend update, then re-upload missing news covers through the admin editor
+and save the article. An old missing file cannot be recovered from its URL alone;
+restore it from a backup or use the original photo.
+
 ## Prerequisites
 
 - Java 17+

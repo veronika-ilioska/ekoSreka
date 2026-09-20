@@ -3,9 +3,6 @@ package com.ekosrekja.ekosrekjafullstack.upload;
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
@@ -19,15 +16,15 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 @Service
 public class CloudinaryUploadService {
     private final Cloudinary cloudinary;
-    private final String uploadDir;
+    private final StoredUploadRepository storedUploads;
 
     public CloudinaryUploadService(
             @Value("${cloudinary.url:}") String cloudinaryUrl,
             @Value("${cloudinary.cloud-name:}") String cloudName,
             @Value("${cloudinary.api-key:}") String apiKey,
             @Value("${cloudinary.api-secret:}") String apiSecret,
-            @Value("${app.upload-dir:uploads}") String uploadDir) {
-        this.uploadDir = uploadDir;
+            StoredUploadRepository storedUploads) {
+        this.storedUploads = storedUploads;
 
         if (cloudinaryUrl != null && !cloudinaryUrl.isBlank()) {
             this.cloudinary = new Cloudinary(cloudinaryUrl);
@@ -57,7 +54,7 @@ public class CloudinaryUploadService {
         }
 
         if (cloudinary == null) {
-            return storeLocalUpload(file, folder);
+            return storePersistentUpload(file, folder);
         }
 
         String resourceType = expectedContentTypePrefix.startsWith("video/") ? "video" : "image";
@@ -83,11 +80,8 @@ public class CloudinaryUploadService {
         }
     }
 
-    private String storeLocalUpload(MultipartFile file, String folder) {
+    private String storePersistentUpload(MultipartFile file, String folder) {
         try {
-            Path targetDir = Paths.get(uploadDir, folder).toAbsolutePath().normalize();
-            Files.createDirectories(targetDir);
-
             String originalName = file.getOriginalFilename() == null ? "" : file.getOriginalFilename();
             String extension = "";
             int dotIndex = originalName.lastIndexOf('.');
@@ -96,14 +90,9 @@ public class CloudinaryUploadService {
             }
 
             String filename = UUID.randomUUID() + extension;
-            Path targetFile = targetDir.resolve(filename).normalize();
-            if (!targetFile.startsWith(targetDir)) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid upload filename");
-            }
-
-            file.transferTo(targetFile);
+            storedUploads.save(folder + "/" + filename, file.getContentType(), file.getBytes());
             return ServletUriComponentsBuilder.fromCurrentContextPath()
-                    .path("/uploads/")
+                    .path("/api/media/")
                     .path(folder)
                     .path("/")
                     .path(filename)
