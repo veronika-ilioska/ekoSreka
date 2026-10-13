@@ -37,7 +37,7 @@
       </div>
 
       <div v-else-if="items.length" class="grid">
-        <article v-for="game in items" :key="game.id" class="card">
+        <article v-for="game in items" :key="game.id" class="card game-card" role="button" tabindex="0" @click="openGame(game)" @keydown.enter.prevent="openGame(game)" @keydown.space.prevent="openGame(game)">
           <div class="thumb-wrap thumb-wrap--game">
             <img :src="game.thumbnailUrl || 'https://placehold.co/600x400?text=Game'" :alt="game.title" class="thumb" loading="lazy" />
           </div>
@@ -46,10 +46,7 @@
           </div>
           <h2 class="title">{{ game.title }}</h2>
           <p class="content">{{ truncate(game.description, 130) }}</p>
-          <details v-if="game.rules" class="rules">
-            <summary>Правила</summary>
-            <p>{{ truncate(game.rules, 220) }}</p>
-          </details>
+          <span class="chip">{{ game.circleGame ? 'Најди ги разликите' : 'Отвори ја играта' }}</span>
         </article>
       </div>
 
@@ -62,14 +59,43 @@
         <span>Страна {{ page + 1 }} од {{ totalPages }}</span>
         <button class="btn" :disabled="page >= totalPages - 1 || loading" @click="goPage(page + 1)">Следна</button>
       </footer>
+      <dialog ref="gameDialog" class="game-dialog" aria-labelledby="game-title" @click="closeOnBackdrop">
+        <template v-if="selectedGame">
+          <button class="btn close-game" type="button" @click="gameDialog.close()">Затвори ✕</button>
+          <h2 id="game-title">{{ selectedGame.title }}</h2>
+          <p class="full-text">{{ selectedGame.description }}</p>
+          <h3 v-if="selectedGame.rules">Правила</h3>
+          <p class="full-text">{{ selectedGame.rules }}</p>
+          <p v-if="selectedGame.circleGame">Кликни на разликите на сликата за да ги заокружиш.</p>
+          <GamePicture v-if="selectedGame.thumbnailUrl" :key="playKey" :src="selectedGame.thumbnailUrl"
+            :alt="selectedGame.title" :spots="parseSpots(selectedGame.differenceSpots)" :playable="selectedGame.circleGame" />
+          <p v-else>Нема слика за оваа игра.</p>
+        </template>
+      </dialog>
     </div>
   </section>
 </template>
 
 <script setup>
-  import { onMounted, ref } from 'vue';
+  import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+  import GamePicture from '../components/GamePicture.vue';
+  import { parseSpots } from '../utils/differenceGame';
   import  api from '../api';
 
+  const selectedGame = ref(null);
+  const gameDialog = ref(null);
+  const playKey = ref(0);
+  async function openGame(game) {
+    selectedGame.value = game;
+    playKey.value++;
+    await nextTick();
+    gameDialog.value.showModal();
+  }
+  function closeOnBackdrop(event) {
+    if (event.target !== gameDialog.value) return;
+    const rect = gameDialog.value.getBoundingClientRect();
+    if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) gameDialog.value.close();
+  }
   const items = ref([]);
   const page = ref(0);
   const size = ref(12);
@@ -119,10 +145,17 @@
     return value.length > length ? `${value.slice(0, length - 1)}...` : value;
   }
 
+  onBeforeUnmount(() => clearTimeout(timer));
   onMounted(load);
 </script>
 
 <style scoped>
+  .game-card { cursor: pointer; }
+  .game-card:focus-visible { outline: 3px solid #2e7d32; outline-offset: 3px; }
+  .game-dialog { width: min(1000px, 94vw); max-height: 90vh; overflow: auto; padding: clamp(1rem, 3vw, 2rem); border: 0; border-radius: 12px; color: #1b2a1b; }
+  .game-dialog::backdrop { background: #102a19bb; }
+  .close-game { float: right; margin-left: 1rem; }
+  .full-text { white-space: pre-wrap; line-height: 1.7; }
   .media-page { color: #1b2a1b; padding: 1rem 0 4rem; }
   .container { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
   .media-hero { align-items: end; background: linear-gradient(115deg, rgba(27,77,43,0.96) 0%, rgba(46,125,50,0.9) 48%, rgba(46,125,50,0.3) 100%), url('../img/game.png') right center / contain no-repeat; border-radius: 8px; color: #fff; display: grid; gap: 1.5rem; grid-template-columns: minmax(0, 1fr) 220px; isolation: isolate; margin-bottom: 1.25rem; min-height: 260px; overflow: hidden; padding: clamp(1.5rem, 4vw, 2.5rem); position: relative; }

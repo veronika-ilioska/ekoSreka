@@ -27,6 +27,10 @@ public class Game {
     private Difficulty difficulty;
 
     private String thumbnailUrl;
+    private boolean circleGame;
+
+    @Column(columnDefinition = "text")
+    private String differenceSpots = "[]";
     private OffsetDateTime updatedAt = OffsetDateTime.now();
 
     @PrePersist

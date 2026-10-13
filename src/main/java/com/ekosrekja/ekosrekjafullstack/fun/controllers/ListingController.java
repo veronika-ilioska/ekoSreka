@@ -42,7 +42,7 @@ public class ListingController {
                 : photoRepo.findByTitleContainingIgnoreCase(q, pageable);
     }
 
-    @GetMapping("/media/photos/{id}")
+    @GetMapping("/media/photos/{id:[0-9]+}")
     public Photo photo(@PathVariable Long id) {
         return photoRepo.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Photo not found"));

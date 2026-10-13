@@ -562,6 +562,7 @@ public class AdminController {
             @RequestHeader("X-User-Id") Long userId,
             @RequestBody Game game) {
         requireAdmin(userId);
+        validateCircleGame(game);
         return ResponseEntity.status(HttpStatus.CREATED).body(gameRepository.save(game));
     }
 
@@ -572,6 +573,8 @@ public class AdminController {
             @RequestParam Difficulty difficulty,
             @RequestParam String description,
             @RequestParam(required = false) String rules,
+            @RequestParam(defaultValue = "false") boolean circleGame,
+            @RequestParam(defaultValue = "[]") String differenceSpots,
             @RequestParam("file") MultipartFile file) {
         requireAdmin(userId);
         String mediaUrl = uploadService.upload(file, "games", "image/");
@@ -581,7 +584,10 @@ public class AdminController {
         game.setDifficulty(difficulty);
         game.setDescription(description);
         game.setRules(rules);
+        game.setCircleGame(circleGame);
+        game.setDifferenceSpots(differenceSpots);
         game.setThumbnailUrl(mediaUrl);
+        validateCircleGame(game);
         return ResponseEntity.status(HttpStatus.CREATED).body(gameRepository.save(game));
     }
 
@@ -597,9 +603,12 @@ public class AdminController {
                     game.setDifficulty(gameDetails.getDifficulty());
                     game.setDescription(gameDetails.getDescription());
                     game.setRules(gameDetails.getRules());
+                    game.setCircleGame(gameDetails.isCircleGame());
+                    game.setDifferenceSpots(gameDetails.getDifferenceSpots());
                     if (gameDetails.getThumbnailUrl() != null && !gameDetails.getThumbnailUrl().isBlank()) {
                         game.setThumbnailUrl(gameDetails.getThumbnailUrl());
                     }
+                    validateCircleGame(game);
                     return ResponseEntity.ok(gameRepository.save(game));
                 })
                 .orElse(ResponseEntity.notFound().build());
@@ -613,6 +622,8 @@ public class AdminController {
             @RequestParam Difficulty difficulty,
             @RequestParam String description,
             @RequestParam(required = false) String rules,
+            @RequestParam(defaultValue = "false") boolean circleGame,
+            @RequestParam(defaultValue = "[]") String differenceSpots,
             @RequestParam(value = "file", required = false) MultipartFile file) {
         requireAdmin(userId);
         return gameRepository.findById(id)
@@ -621,12 +632,44 @@ public class AdminController {
                     game.setDifficulty(difficulty);
                     game.setDescription(description);
                     game.setRules(rules);
+                    game.setCircleGame(circleGame);
+                    game.setDifferenceSpots(differenceSpots);
                     if (file != null && !file.isEmpty()) {
                         game.setThumbnailUrl(uploadService.upload(file, "games", "image/"));
                     }
+                    validateCircleGame(game);
                     return ResponseEntity.ok(gameRepository.save(game));
                 })
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    private void validateCircleGame(Game game) {
+        if (!game.isCircleGame()) {
+            game.setDifferenceSpots("[]");
+            return;
+        }
+        try {
+            var spots = objectMapper.readTree(game.getDifferenceSpots());
+            if (game.getThumbnailUrl() == null || game.getThumbnailUrl().isBlank()
+                    || spots == null || !spots.isArray() || spots.isEmpty() || spots.size() > 100) {
+                throw new IllegalArgumentException();
+            }
+            for (var spot : spots) {
+                for (String coordinate : List.of("x", "y", "radius")) {
+                    var value = spot.get(coordinate);
+                    if (value == null || !value.isNumber() || !Double.isFinite(value.asDouble())
+                            || value.asDouble() < 0 || value.asDouble() > 1) {
+                        throw new IllegalArgumentException();
+                    }
+                }
+                if (spot.get("radius").asDouble() < 0.005 || spot.get("radius").asDouble() > 0.2) {
+                    throw new IllegalArgumentException();
+                }
+            }
+        } catch (Exception exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Circle games require a picture and 1–100 valid difference spots.");
+        }
     }
 
     @DeleteMapping("/games/{id}")

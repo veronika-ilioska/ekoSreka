@@ -111,6 +111,17 @@
               <input v-else :id="field.name" v-model.trim="form[field.name]" class="form-control" :type="field.type" :required="isFieldRequired(field)" />
             </div>
 
+            <div v-if="activeSection === 'games'" class="field wide">
+              <label for="gameType">Тип на игра</label>
+              <select id="gameType" v-model="form.gameType" class="form-select" required>
+                <option value="" disabled>Избери тип на игра...</option>
+                <option value="FIND_DIFFERENCES">Најди ги разликите</option>
+              </select>
+              <GamePicture v-if="gamePreview" :key="gamePreview" :src="gamePreview" alt="Слика за играта"
+                :editable="form.gameType === 'FIND_DIFFERENCES'" :spots="gameSpots" @update:spots="gameSpots = $event" />
+              <p v-else-if="form.gameType === 'FIND_DIFFERENCES'">Прикачи слика за да ги означиш разликите.</p>
+            </div>
+
             <div class="form-actions">
               <button class="btn eco-btn" type="submit" :disabled="saving">
                 {{ saving ? 'Се зачувува...' : `${editingItem ? 'Зачувај' : 'Додај'} ${currentSection.singular}` }}
@@ -238,7 +249,9 @@
 </template>
 
 <script setup>
-  import { computed, nextTick, onMounted, reactive, ref } from 'vue';
+  import { computed, nextTick, onMounted, onBeforeUnmount, reactive, ref, watch } from 'vue';
+  import GamePicture from '../components/GamePicture.vue';
+  import { parseSpots } from '../utils/differenceGame';
   import { useRouter } from 'vue-router';
   import  api  from '../api';
   import { useAuthStore } from '../stores/authStore';
@@ -256,7 +269,7 @@
     { value: 'WEEKLY', label: 'Неделен' },
     { value: 'MONTHLY', label: 'Месечен' },
   ];
-  const newsCategoryOptions = ['Рециклирање', 'Енергија', 'Природа', 'Клима'];
+  const newsCategoryOptions = ['Светот и животната средина', 'Македонија и екологијата', 'Учиме за екологија', 'Клима'];
   const sections = [
     {
       key: 'news',
@@ -339,6 +352,20 @@
   const importText = ref('');
   const importError = ref('');
   const form = reactive({});
+  const gameSpots = ref([]);
+  const gamePreview = ref('');
+  let gameObjectUrl = '';
+  watch(() => [activeSection.value, form.file, editingItem.value?.thumbnailUrl], () => {
+    if (gameObjectUrl) URL.revokeObjectURL(gameObjectUrl);
+    gameObjectUrl = '';
+    gamePreview.value = '';
+    if (activeSection.value !== 'games') return;
+    if (form.file instanceof File) {
+      gameObjectUrl = URL.createObjectURL(form.file);
+      gamePreview.value = gameObjectUrl;
+    } else gamePreview.value = editingItem.value?.thumbnailUrl || '';
+  });
+  onBeforeUnmount(() => { if (gameObjectUrl) URL.revokeObjectURL(gameObjectUrl); });
   const quizQuestions = ref([]);
   const newsBlocks = ref([]);
   const newsTextareas = reactive({});
@@ -354,6 +381,8 @@
   }
   function resetForm() {
     Object.keys(form).forEach((key) => delete form[key]);
+    gameSpots.value = [];
+    form.gameType = '';
     if (activeSection.value === 'quizzes') {
       form.title = '';
       form.level = '';
@@ -417,6 +446,16 @@
         if (value === '' || value === null || value === undefined) return;
         payload.append(field.name, value);
       });
+      if (activeSection.value === 'games') {
+        if (form.gameType !== 'FIND_DIFFERENCES') {
+          throw new Error('Избери тип на игра.');
+        }
+        if (!gamePreview.value || !gameSpots.value.length) {
+          throw new Error('Означи барем една разлика на сликата.');
+        }
+        payload.append('circleGame', form.gameType === 'FIND_DIFFERENCES');
+        payload.append('differenceSpots', JSON.stringify(gameSpots.value));
+      }
       return payload;
     }
     return currentSection.value.fields.reduce((payload, field) => {
@@ -428,6 +467,7 @@
   }
   function handleContentFile(fieldName, event) {
     form[fieldName] = event.target.files?.[0] || null;
+    if (activeSection.value === 'games' && form[fieldName]) gameSpots.value = [];
   }
   async function uploadInlineNewsImage(event, insertIndex = newsBlocks.value.length) {
     const file = event.target.files?.[0];
@@ -771,7 +811,7 @@
       resetForm();
       await loadItems();
     } catch (error) {
-      pageError.value = error.response?.data?.message || `Не може да се зачува ${currentSection.value.singular}.`;
+      pageError.value = error.response?.data?.message || error.message || `Не може да се зачува ${currentSection.value.singular}.`;
     } finally {
       saving.value = false;
     }
@@ -817,6 +857,10 @@
         form[field.name] = item[field.name] ?? '';
       }
     });
+    if (activeSection.value === 'games') {
+      form.gameType = item.circleGame ? 'FIND_DIFFERENCES' : '';
+      gameSpots.value = parseSpots(item.differenceSpots);
+    }
     if (activeSection.value === 'news') {
       newsBlocks.value = parseNewsBlocks(item.content || '');
       syncNewsContent();

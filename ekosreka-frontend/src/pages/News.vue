@@ -70,7 +70,7 @@
   const page = ref(0);
   const size = ref(12);
 
-  const categories = ['Рециклирање', 'Енергија', 'Природа', 'Клима'];
+  const categories = ['Светот и животната средина', 'Македонија и екологијата', 'Учиме за екологија', 'Клима'];
 
   // читај ја категоријата од URL
   const category = ref(route.query.category ? String(route.query.category) : undefined);

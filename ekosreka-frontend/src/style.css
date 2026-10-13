@@ -112,10 +112,7 @@ body {
   text-decoration: none;
   color: #fff;
   padding: 40px 20px;
-  transition:
-    background-color 0.3s ease,
-    transform 0.3s ease,
-    box-shadow 0.3s ease;
+  transition: background-color 0.25s ease;
   min-height: 220px;
   position: relative;
   overflow: hidden;
@@ -124,23 +121,52 @@ body {
 .cta-tile::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 50%;
-  width: 200%;
-  height: 200%;
-  transform: translate(-50%, -50%);
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 50% 35%, rgba(255, 255, 255, 0.3), transparent 70%);
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transform: scale(0.75);
+  transition: opacity 0.3s ease, transform 0.45s ease;
 }
 
-.cta-tile:hover {
-  background-color: rgba(255, 255, 255, 0.15);
-  transform: translateY(-5px) scale(1.02);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+.cta-tile--quiz { --icon-tilt: -7deg; }
+.cta-tile--shop { --icon-tilt: 6deg; }
+.cta-tile--fun { --icon-tilt: -5deg; }
+
+.cta-tile:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: -6px;
+  background-color: rgba(27, 77, 43, 0.2);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .cta-tile:hover {
+    color: #fff;
+    background-color: rgba(27, 77, 43, 0.2);
+  }
+  .cta-tile:hover::before {
+    opacity: 1;
+    transform: scale(1);
+  }
+  .cta-tile:hover .cta-icon {
+    transform: translateY(-8px) rotate(var(--icon-tilt, -6deg)) scale(1.12);
+    background: rgba(255, 255, 255, 0.4);
+    box-shadow: 0 12px 24px rgba(20, 65, 30, 0.2), 0 0 0 7px rgba(255, 255, 255, 0.12);
+  }
+  .cta-tile:hover h3::after {
+    transform: scaleX(1);
+  }
+}
+
+.cta-tile:focus-visible::before { opacity: 1; transform: scale(1); }
+.cta-tile:focus-visible h3::after { transform: scaleX(1); }
+
+.cta-tile:active {
+  background-color: rgba(27, 77, 43, 0.28);
+}
+
+.cta-tile:active .cta-icon {
+  transform: scale(0.96);
 }
 
 .cta-inner {
@@ -159,14 +185,7 @@ body {
   height: 80px;
   background: rgba(255, 255, 255, 0.2);
   border-radius: 50%;
-  transition:
-    transform 0.3s ease,
-    background-color 0.3s ease;
-}
-
-.cta-tile:hover .cta-icon {
-  transform: rotate(15deg) scale(1.1);
-  background: rgba(255, 255, 255, 0.3);
+  transition: transform 0.4s cubic-bezier(0.22, 1.4, 0.36, 1), background-color 0.25s ease, box-shadow 0.3s ease;
 }
 
 .cta-tile h3 {
@@ -175,6 +194,26 @@ body {
   color: #fff;
   font-size: 1.5rem;
   letter-spacing: 0.5px;
+  position: relative;
+  display: inline-block;
+}
+
+.cta-tile h3::after {
+  content: '';
+  position: absolute;
+  left: 15%;
+  right: 15%;
+  bottom: -5px;
+  height: 3px;
+  border-radius: 3px;
+  background: #fff;
+  transform: scaleX(0);
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cta-tile, .cta-tile::before, .cta-tile .cta-icon, .cta-tile h3::after { transition: none; }
+  .cta-tile:hover .cta-icon, .cta-tile:active .cta-icon { transform: none; }
 }
 
 .cta-tile p {
@@ -199,25 +238,6 @@ body {
   opacity: 1;
 }
 
-.cta-tile--quiz::after,
-.cta-tile--shop::after,
-.cta-tile--fun::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: rgba(255, 255, 255, 0.3);
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: transform 0.3s ease;
-}
-
-.cta-tile:hover::after {
-  transform: scaleX(1);
-}
-
 @media (min-width: 768px) {
   .cta-tile {
     padding: 50px 30px;
@@ -235,19 +255,6 @@ body {
   }
 }
 
-@keyframes float {
-  0%,
-  100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
-}
-
-.cta-tile:hover .cta-icon {
-  animation: float 0.6s ease-in-out infinite;
-}
 /* BEFORE → AFTER секција */
 .eco-ba .ba-card {
   overflow: hidden;
