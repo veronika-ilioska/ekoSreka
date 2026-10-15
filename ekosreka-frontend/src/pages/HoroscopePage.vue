@@ -22,17 +22,20 @@
       </div>
 
       <div v-else-if="entries.length" class="grid">
-        <article v-for="entry in entries" :key="entry.id" class="card">
+        <article v-for="entry in entries" :key="entry.id" class="card horoscope-card"
+          role="button" tabindex="0" aria-haspopup="dialog" :aria-label="`Прочитај: ${entry.title}`"
+          @click="openHoroscope(entry)" @keydown.enter.prevent="openHoroscope(entry)" @keydown.space.prevent="openHoroscope(entry)">
           <div class="meta-top">
             <span class="chip">{{ signLabel(entry.sign) }}</span>
             <span class="chip chip-date">{{ formatUploadTime(entry.createdAt) }}</span>
           </div>
           <h2 class="title">{{ entry.title }}</h2>
-          <p class="content">{{ entry.content }}</p>
+          <p class="content preview">{{ entry.content }}</p>
           <div class="eco-tip" v-if="entry.ecoTip">
             <strong>Еко совет:</strong>
-            <span>{{ entry.ecoTip }}</span>
+            <span class="preview">{{ entry.ecoTip }}</span>
           </div>
+          <span class="read-more">Прочитај го хороскопот →</span>
         </article>
       </div>
 
@@ -49,12 +52,27 @@
           Следна
         </button>
       </footer>
+      <dialog ref="horoscopeDialog" class="horoscope-dialog" aria-labelledby="horoscope-title" @click="closeOnBackdrop" @close="selectedEntry = null">
+        <template v-if="selectedEntry">
+          <div class="dialog-heading">
+            <span class="chip">{{ signLabel(selectedEntry.sign) }}</span>
+            <button type="button" class="btn" autofocus @click="horoscopeDialog.close()">Затвори ✕</button>
+          </div>
+          <h2 id="horoscope-title">{{ selectedEntry.title }}</h2>
+          <p class="posted-at">{{ formatUploadTime(selectedEntry.createdAt) }}</p>
+          <p class="content full-text">{{ selectedEntry.content }}</p>
+          <div v-if="selectedEntry.ecoTip" class="eco-tip full-text">
+            <strong>Еко совет:</strong>
+            <span>{{ selectedEntry.ecoTip }}</span>
+          </div>
+        </template>
+      </dialog>
     </div>
   </section>
 </template>
 
 <script setup>
-  import { onMounted, ref } from 'vue';
+  import { nextTick, onMounted, ref } from 'vue';
   import  api  from '../api';
 
   const signs = [
@@ -78,6 +96,22 @@
   const size = ref(12);
   const totalPages = ref(0);
   const totalItems = ref(0);
+  const selectedEntry = ref(null);
+  const horoscopeDialog = ref(null);
+
+  async function openHoroscope(entry) {
+    selectedEntry.value = entry;
+    await nextTick();
+    if (!horoscopeDialog.value.open) horoscopeDialog.value.showModal();
+  }
+
+  function closeOnBackdrop(event) {
+    if (event.target !== horoscopeDialog.value) return;
+    const rect = horoscopeDialog.value.getBoundingClientRect();
+    if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) {
+      horoscopeDialog.value.close();
+    }
+  }
 
   function signLabel(value) {
     return signs.find((sign) => sign.value === value)?.label || value;
@@ -137,6 +171,17 @@
 </script>
 
 <style scoped>
+  .horoscope-card { cursor: pointer; }
+  .horoscope-card:focus-visible { outline: 3px solid #2e7d32; outline-offset: 3px; }
+  .preview { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .read-more { color: #2e7d32; font-weight: 800; font-size: .9rem; }
+  .horoscope-dialog { width: min(760px, 94vw); max-height: 90vh; overflow: auto; border: 0; border-top: 5px solid #2e7d32; border-radius: 12px; padding: clamp(1.25rem, 4vw, 2.5rem); color: #1b2a1b; }
+  .horoscope-dialog::backdrop { background: #102817bb; }
+  .dialog-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem; }
+  .horoscope-dialog h2 { font-size: clamp(1.5rem, 4vw, 2rem); overflow-wrap: anywhere; }
+  .posted-at { color: #6b7280; font-size: .85rem; }
+  .full-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .horoscope-dialog .eco-tip { margin-top: 1.5rem; }
   .eco-section {
     color: #1b2a1b;
     padding: 1rem 0 4rem;
