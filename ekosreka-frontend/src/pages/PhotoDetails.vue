@@ -106,10 +106,10 @@
   }
 
   .photo-image {
-    aspect-ratio: 16 / 9;
+    height: auto;
     background: #eaf6ea;
     display: block;
-    object-fit: cover;
+    object-fit: contain;
     width: 100%;
   }
 
@@ -165,7 +165,7 @@
 
   @media (max-width: 720px) {
     .photo-image {
-      aspect-ratio: 4 / 3;
+      height: auto;
     }
   }
 </style>
